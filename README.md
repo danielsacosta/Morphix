@@ -32,6 +32,7 @@ The API follows Hexagonal Architecture because FastAPI/API Gateway is only one i
 - `application/ports`: contracts required by use cases, such as job persistence, object URLs and conversion orchestration.
 - `adapters/inbound/http`: FastAPI routes, schemas, dependency wiring and error mapping.
 - `adapters/outbound`: concrete AWS implementations for DynamoDB, S3 presigned URLs and Step Functions.
+- `apps/api/state_machine_definition.json`: API-owned Step Functions ASL definition deployed with the API stack.
 - `core`: runtime configuration, security helpers and time utilities.
 
 Dependency direction is kept inward: inbound adapters call use cases, use cases depend on ports, and outbound adapters implement those ports.
@@ -61,7 +62,7 @@ The infrastructure is provisioned with Terraform modules and Terragrunt live sta
 - CloudFront and S3 deliver the React/Vite frontend.
 - API Gateway invokes the FastAPI Lambda adapter.
 - Private S3 buckets store input and output objects through short-lived presigned URLs.
-- Step Functions starts and tracks conversion orchestration.
+- Step Functions starts and tracks conversion orchestration from the API infrastructure scope.
 - ECS Fargate runs isolated worker tasks from ECR images.
 - DynamoDB stores job metadata, ownership and status.
 - CloudWatch captures logs and operational telemetry.
@@ -72,7 +73,7 @@ The infrastructure is provisioned with Terraform modules and Terragrunt live sta
 - `apps/frontend`: React + TypeScript + Vite conversion UI.
 - `apps/api`: FastAPI Lambda service for jobs, presigned URLs, ownership checks and Step Functions starts.
 - `apps/worker`: Dockerized Python worker using local conversion engines.
-- `infra/blueprints`: reusable Terraform modules and remote-state bootstrap.
+- `infra/blueprints`: reusable Terraform modules and remote-state bootstrap. The conversion state machine lives in the API module, not in a hidden shared stack.
 - `infra/terraform`: Terragrunt live stacks.
 - `.github/workflows`: CI/CD for infra, frontend, API and worker.
 - `docs/prd-coverage.md`: PRD requirement coverage checklist.

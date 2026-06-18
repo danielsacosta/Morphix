@@ -20,6 +20,11 @@ variable "api_package_path" {
   default     = ""
 }
 
+variable "state_machine_definition_path" {
+  type        = string
+  description = "Local path to the API-owned Step Functions ASL JSON definition."
+}
+
 variable "jobs_table_name" {
   type        = string
   description = "Jobs table name."
@@ -50,9 +55,34 @@ variable "output_bucket_arn" {
   description = "Output bucket ARN."
 }
 
-variable "state_machine_arn" {
+variable "cluster_arn" {
   type        = string
-  description = "Conversion state machine ARN."
+  description = "ECS cluster ARN used by the conversion state machine."
+}
+
+variable "task_definition_arn" {
+  type        = string
+  description = "Worker task definition ARN used by the conversion state machine."
+}
+
+variable "task_execution_role_arn" {
+  type        = string
+  description = "Worker execution role ARN passed by Step Functions."
+}
+
+variable "task_role_arn" {
+  type        = string
+  description = "Worker task role ARN passed by Step Functions."
+}
+
+variable "worker_security_group_id" {
+  type        = string
+  description = "Worker security group used by the conversion state machine."
+}
+
+variable "private_subnet_ids" {
+  type        = list(string)
+  description = "Private subnet IDs used by the conversion state machine."
 }
 
 variable "max_file_size_mb" {

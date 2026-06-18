@@ -10,7 +10,7 @@ This checklist maps the PRD to implemented repository assets.
 | Frontend React + Vite | `apps/frontend`. |
 | Backend separated from infra | `apps/api`, deployed by `infra/blueprints/modules/api`. |
 | Worker in ECS Fargate | `apps/worker`, `infra/blueprints/modules/fargate-worker`. |
-| Step Functions orchestration | `infra/blueprints/modules/step-functions`. |
+| Step Functions orchestration | `apps/api/state_machine_definition.json` and API-scoped Terraform resources. |
 | S3 input/output/frontend | `storage` and `frontend` modules. |
 | DynamoDB jobs table | `jobs-db` module. |
 | CI/CD GitHub Actions | `.github/workflows/*.yml`. |

@@ -75,7 +75,6 @@ jobs:
             "infra/terraform/envs/frontend"
             "infra/terraform/live/shared/observability"
             "infra/terraform/live/services/api"
-            "infra/terraform/live/shared/step-functions"
             "infra/terraform/live/services/worker"
             "infra/terraform/live/shared/ecs"
             "infra/terraform/live/shared/jobs-db"

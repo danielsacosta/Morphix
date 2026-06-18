@@ -1,7 +1,30 @@
 locals {
-  name           = "${var.project_name}-${var.environment}"
-  create_runtime = var.api_package_path != ""
-  log_group      = "/aws/lambda/${local.name}-api"
+  name                              = "${var.project_name}-${var.environment}"
+  create_runtime                    = var.api_package_path != ""
+  log_group                         = "/aws/lambda/${local.name}-api"
+  state_machine_log_group           = "/aws/stepfunctions/${local.name}-conversion"
+  state_machine_definition_template = file(var.state_machine_definition_path)
+  state_machine_definition = replace(
+    replace(
+      replace(
+        replace(
+          replace(
+            local.state_machine_definition_template,
+            "\"__JOBS_TABLE_NAME__\"",
+            jsonencode(var.jobs_table_name)
+          ),
+          "\"__CLUSTER_ARN__\"",
+          jsonencode(var.cluster_arn)
+        ),
+        "\"__TASK_DEFINITION_ARN__\"",
+        jsonencode(var.task_definition_arn)
+      ),
+      "\"__WORKER_SECURITY_GROUP_IDS__\"",
+      jsonencode([var.worker_security_group_id])
+    ),
+    "\"__PRIVATE_SUBNET_IDS__\"",
+    jsonencode(var.private_subnet_ids)
+  )
 }
 
 resource "aws_cloudwatch_log_group" "api" {
@@ -47,7 +70,7 @@ data "aws_iam_policy_document" "api" {
   statement {
     sid       = "StartConversions"
     actions   = ["states:StartExecution"]
-    resources = [var.state_machine_arn]
+    resources = [aws_sfn_state_machine.conversion.arn]
   }
 }
 
@@ -79,7 +102,7 @@ resource "aws_lambda_function" "api" {
       JOBS_TABLE_NAME   = var.jobs_table_name
       INPUT_BUCKET      = var.input_bucket_name
       OUTPUT_BUCKET     = var.output_bucket_name
-      STATE_MACHINE_ARN = var.state_machine_arn
+      STATE_MACHINE_ARN = aws_sfn_state_machine.conversion.arn
       MAX_FILE_SIZE_MB  = tostring(var.max_file_size_mb)
       ALLOWED_ORIGINS   = join(",", var.allowed_origins)
     }
@@ -150,4 +173,84 @@ resource "aws_lambda_permission" "api_gateway" {
   function_name = aws_lambda_function.api[0].function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.api[0].execution_arn}/*/*"
+}
+
+resource "aws_cloudwatch_log_group" "conversion" {
+  name              = local.state_machine_log_group
+  retention_in_days = 14
+  tags              = var.tags
+}
+
+data "aws_iam_policy_document" "states_assume" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["states.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "state_machine" {
+  name               = "${local.name}-conversion-sfn"
+  assume_role_policy = data.aws_iam_policy_document.states_assume.json
+  tags               = var.tags
+}
+
+data "aws_iam_policy_document" "state_machine" {
+  statement {
+    sid       = "RunWorkerTask"
+    actions   = ["ecs:RunTask", "ecs:StopTask", "ecs:DescribeTasks"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid       = "PassWorkerRoles"
+    actions   = ["iam:PassRole"]
+    resources = [var.task_execution_role_arn, var.task_role_arn]
+  }
+
+  statement {
+    sid       = "UpdateJobStatus"
+    actions   = ["dynamodb:UpdateItem"]
+    resources = [var.jobs_table_arn]
+  }
+
+  statement {
+    sid = "WriteExecutionLogs"
+    actions = [
+      "logs:CreateLogDelivery",
+      "logs:GetLogDelivery",
+      "logs:UpdateLogDelivery",
+      "logs:DeleteLogDelivery",
+      "logs:ListLogDeliveries",
+      "logs:PutResourcePolicy",
+      "logs:DescribeResourcePolicies",
+      "logs:DescribeLogGroups"
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "state_machine" {
+  name   = "${local.name}-conversion-sfn-policy"
+  role   = aws_iam_role.state_machine.id
+  policy = data.aws_iam_policy_document.state_machine.json
+}
+
+resource "aws_sfn_state_machine" "conversion" {
+  name       = "${local.name}-conversion"
+  role_arn   = aws_iam_role.state_machine.arn
+  type       = "STANDARD"
+  definition = local.state_machine_definition
+
+  logging_configuration {
+    include_execution_data = false
+    level                  = "ERROR"
+    log_destination        = "${aws_cloudwatch_log_group.conversion.arn}:*"
+  }
+
+  depends_on = [aws_iam_role_policy.state_machine]
+
+  tags = var.tags
 }

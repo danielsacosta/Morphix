@@ -1,0 +1,141 @@
+{
+  "Comment": "Morphix asynchronous conversion workflow",
+  "StartAt": "MarkProcessing",
+  "States": {
+    "MarkProcessing": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "__JOBS_TABLE_NAME__",
+        "Key": {
+          "job_id": {
+            "S.$": "$.job_id"
+          }
+        },
+        "UpdateExpression": "SET #status = :status, #updated_at = :updated_at",
+        "ExpressionAttributeNames": {
+          "#status": "status",
+          "#updated_at": "updated_at"
+        },
+        "ExpressionAttributeValues": {
+          ":status": {
+            "S": "PROCESSING"
+          },
+          ":updated_at": {
+            "S.$": "$$.State.EnteredTime"
+          }
+        }
+      },
+      "ResultPath": null,
+      "Next": "RunWorker"
+    },
+    "RunWorker": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::ecs:runTask.sync",
+      "Parameters": {
+        "LaunchType": "FARGATE",
+        "Cluster": "__CLUSTER_ARN__",
+        "TaskDefinition": "__TASK_DEFINITION_ARN__",
+        "PlatformVersion": "LATEST",
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "AssignPublicIp": "DISABLED",
+            "SecurityGroups": "__WORKER_SECURITY_GROUP_IDS__",
+            "Subnets": "__PRIVATE_SUBNET_IDS__"
+          }
+        },
+        "Overrides": {
+          "ContainerOverrides": [
+            {
+              "Name": "worker",
+              "Environment": [
+                {
+                  "Name": "JOB_PAYLOAD",
+                  "Value.$": "States.JsonToString($)"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed",
+            "ECS.AmazonECSException"
+          ],
+          "IntervalSeconds": 10,
+          "MaxAttempts": 2,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultPath": "$.worker_result",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": "$.error",
+          "Next": "MarkFailed"
+        }
+      ],
+      "Next": "MarkCompleted"
+    },
+    "MarkCompleted": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "__JOBS_TABLE_NAME__",
+        "Key": {
+          "job_id": {
+            "S.$": "$.job_id"
+          }
+        },
+        "UpdateExpression": "SET #status = :status, #updated_at = :updated_at",
+        "ExpressionAttributeNames": {
+          "#status": "status",
+          "#updated_at": "updated_at"
+        },
+        "ExpressionAttributeValues": {
+          ":status": {
+            "S": "COMPLETED"
+          },
+          ":updated_at": {
+            "S.$": "$$.State.EnteredTime"
+          }
+        }
+      },
+      "End": true
+    },
+    "MarkFailed": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "__JOBS_TABLE_NAME__",
+        "Key": {
+          "job_id": {
+            "S.$": "$.job_id"
+          }
+        },
+        "UpdateExpression": "SET #status = :status, #updated_at = :updated_at, #error_message = :error_message",
+        "ExpressionAttributeNames": {
+          "#status": "status",
+          "#updated_at": "updated_at",
+          "#error_message": "error_message"
+        },
+        "ExpressionAttributeValues": {
+          ":status": {
+            "S": "FAILED"
+          },
+          ":updated_at": {
+            "S.$": "$$.State.EnteredTime"
+          },
+          ":error_message": {
+            "S": "No fue posible convertir el archivo. Verifica que el archivo no este corrupto."
+          }
+        }
+      },
+      "End": true
+    }
+  }
+}
