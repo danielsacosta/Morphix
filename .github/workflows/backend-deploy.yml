@@ -1,0 +1,175 @@
+name: Backend Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/api/**
+      - apps/worker/**
+      - infra/blueprints/modules/api/**
+      - infra/blueprints/modules/fargate-worker/**
+      - infra/terraform/live/services/api/**
+      - infra/terraform/live/services/worker/**
+      - .github/workflows/backend-deploy.yml
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Backend component to deploy
+        required: true
+        default: both
+        type: choice
+        options:
+          - both
+          - api
+          - worker
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  PROJECT_NAME: morphix
+  ENVIRONMENT: dev
+  TERRAGRUNT_VERSION: 0.98.0
+
+jobs:
+  scope:
+    runs-on: ubuntu-latest
+    outputs:
+      deploy_api: ${{ steps.resolve.outputs.deploy_api }}
+      deploy_worker: ${{ steps.resolve.outputs.deploy_worker }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: resolve
+        name: Resolve deployment scope
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          deploy_api=false
+          deploy_worker=false
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            case "${{ inputs.target }}" in
+              both)
+                deploy_api=true
+                deploy_worker=true
+                ;;
+              api)
+                deploy_api=true
+                ;;
+              worker)
+                deploy_worker=true
+                ;;
+            esac
+          else
+            before="${{ github.event.before }}"
+            after="${{ github.sha }}"
+
+            if [[ "${before}" =~ ^0+$ ]]; then
+              changed_files="$(git diff-tree --no-commit-id --name-only -r "${after}")"
+            else
+              changed_files="$(git diff --name-only "${before}" "${after}")"
+            fi
+
+            while IFS= read -r file; do
+              case "${file}" in
+                apps/api/*|infra/blueprints/modules/api/*|infra/terraform/live/services/api/*)
+                  deploy_api=true
+                  ;;
+                apps/worker/*|infra/blueprints/modules/fargate-worker/*|infra/terraform/live/services/worker/*)
+                  deploy_worker=true
+                  ;;
+                .github/workflows/backend-deploy.yml)
+                  deploy_api=true
+                  deploy_worker=true
+                  ;;
+              esac
+            done <<< "${changed_files}"
+          fi
+
+          echo "deploy_api=${deploy_api}" >> "$GITHUB_OUTPUT"
+          echo "deploy_worker=${deploy_worker}" >> "$GITHUB_OUTPUT"
+          echo "API deploy: ${deploy_api}"
+          echo "Worker deploy: ${deploy_worker}"
+
+  deploy:
+    needs: scope
+    if: needs.scope.outputs.deploy_api == 'true' || needs.scope.outputs.deploy_worker == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+
+      - name: Install Terragrunt
+        run: |
+          curl -L "https://github.com/gruntwork-io/terragrunt/releases/download/v${TERRAGRUNT_VERSION}/terragrunt_linux_amd64" -o /usr/local/bin/terragrunt
+          chmod +x /usr/local/bin/terragrunt
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Test worker
+        if: needs.scope.outputs.deploy_worker == 'true'
+        run: uv run --group dev pytest apps/worker/tests
+
+      - name: Ensure worker ECR repository
+        if: needs.scope.outputs.deploy_worker == 'true'
+        working-directory: infra/terraform/live/services/worker
+        run: terragrunt apply -input=false -no-color -auto-approve
+
+      - name: Login to ECR
+        if: needs.scope.outputs.deploy_worker == 'true'
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push worker image
+        if: needs.scope.outputs.deploy_worker == 'true'
+        working-directory: infra/terraform/live/services/worker
+        run: |
+          REPOSITORY_URL="$(terragrunt output -raw worker_repository_url)"
+          IMAGE_URI="${REPOSITORY_URL}:${GITHUB_SHA}"
+          docker build -t "${IMAGE_URI}" ../../../../../apps/worker
+          docker tag "${IMAGE_URI}" "${REPOSITORY_URL}:latest"
+          docker push "${IMAGE_URI}"
+          docker push "${REPOSITORY_URL}:latest"
+          echo "WORKER_IMAGE_URI=${IMAGE_URI}" >> "$GITHUB_ENV"
+
+      - name: Apply worker task definition
+        if: needs.scope.outputs.deploy_worker == 'true'
+        working-directory: infra/terraform/live/services/worker
+        run: WORKER_IMAGE_URI="${WORKER_IMAGE_URI}" terragrunt apply -input=false -no-color -auto-approve
+
+      - name: Test API
+        if: needs.scope.outputs.deploy_api == 'true' || needs.scope.outputs.deploy_worker == 'true'
+        run: uv run --group dev pytest apps/api/tests
+
+      - name: Build API Lambda package
+        if: needs.scope.outputs.deploy_api == 'true' || needs.scope.outputs.deploy_worker == 'true'
+        working-directory: apps/api
+        run: ./scripts/build_lambda.sh
+
+      - name: Apply API Lambda and state machine
+        if: needs.scope.outputs.deploy_api == 'true' || needs.scope.outputs.deploy_worker == 'true'
+        working-directory: infra/terraform/live/services/api
+        run: |
+          API_LAMBDA_PACKAGE="${GITHUB_WORKSPACE}/apps/api/lambda_dist/morphix-api.zip" \
+            terragrunt apply -input=false -no-color -auto-approve
