@@ -1,0 +1,73 @@
+name: Worker Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/worker/**
+      - infra/blueprints/modules/fargate-worker/**
+      - infra/terraform/live/services/worker/**
+      - .github/workflows/worker-deploy.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  PROJECT_NAME: morphix
+  ENVIRONMENT: dev
+  TERRAGRUNT_VERSION: 0.98.0
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Test worker
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e apps/worker[dev]
+          pytest apps/worker/tests
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+
+      - name: Install Terragrunt
+        run: |
+          curl -L "https://github.com/gruntwork-io/terragrunt/releases/download/v${TERRAGRUNT_VERSION}/terragrunt_linux_amd64" -o /usr/local/bin/terragrunt
+          chmod +x /usr/local/bin/terragrunt
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Ensure worker ECR repository
+        working-directory: infra/terraform/live/services/worker
+        run: terragrunt apply -input=false -no-color -auto-approve
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push worker image
+        working-directory: infra/terraform/live/services/worker
+        run: |
+          REPOSITORY_URL="$(terragrunt output -raw worker_repository_url)"
+          IMAGE_URI="${REPOSITORY_URL}:${GITHUB_SHA}"
+          docker build -t "${IMAGE_URI}" ../../../../../apps/worker
+          docker tag "${IMAGE_URI}" "${REPOSITORY_URL}:latest"
+          docker push "${IMAGE_URI}"
+          docker push "${REPOSITORY_URL}:latest"
+          echo "WORKER_IMAGE_URI=${IMAGE_URI}" >> "$GITHUB_ENV"
+
+      - name: Apply worker task definition
+        working-directory: infra/terraform/live/services/worker
+        run: WORKER_IMAGE_URI="${WORKER_IMAGE_URI}" terragrunt apply -input=false -no-color -auto-approve

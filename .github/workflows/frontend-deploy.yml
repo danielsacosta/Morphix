@@ -1,0 +1,63 @@
+name: Frontend Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/frontend/**
+      - infra/blueprints/modules/frontend/**
+      - infra/terraform/envs/frontend/**
+      - .github/workflows/frontend-deploy.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  PROJECT_NAME: morphix
+  ENVIRONMENT: dev
+  TERRAGRUNT_VERSION: 0.98.0
+  VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+  VITE_MAX_FILE_SIZE_MB: 100
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build -w apps/frontend
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+
+      - name: Install Terragrunt
+        run: |
+          curl -L "https://github.com/gruntwork-io/terragrunt/releases/download/v${TERRAGRUNT_VERSION}/terragrunt_linux_amd64" -o /usr/local/bin/terragrunt
+          chmod +x /usr/local/bin/terragrunt
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Apply frontend infrastructure
+        working-directory: infra/terraform/envs/frontend
+        run: terragrunt apply -input=false -no-color -auto-approve
+
+      - name: Upload static assets
+        working-directory: infra/terraform/envs/frontend
+        run: |
+          BUCKET="$(terragrunt output -raw frontend_bucket_name)"
+          DISTRIBUTION_ID="$(terragrunt output -raw cloudfront_distribution_id)"
+          aws s3 sync ../../../../apps/frontend/dist "s3://${BUCKET}" --delete
+          aws cloudfront create-invalidation --distribution-id "${DISTRIBUTION_ID}" --paths "/*"

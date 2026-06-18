@@ -1,0 +1,106 @@
+name: Infra Lifecycle
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Terraform action
+        required: true
+        default: plan
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+          - destroy-and-recreate
+      confirm_destroy:
+        description: Type "destroy morphix dev" for destructive actions
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  PROJECT_NAME: morphix
+  ENVIRONMENT: dev
+  TERRAGRUNT_VERSION: 0.98.0
+
+jobs:
+  infra:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+
+      - name: Install Terragrunt
+        run: |
+          curl -L "https://github.com/gruntwork-io/terragrunt/releases/download/v${TERRAGRUNT_VERSION}/terragrunt_linux_amd64" -o /usr/local/bin/terragrunt
+          chmod +x /usr/local/bin/terragrunt
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Run lifecycle action
+        shell: bash
+        run: |
+          set -euo pipefail
+          STACKS=(
+            "infra/terraform/live/shared/network"
+            "infra/terraform/live/shared/storage"
+            "infra/terraform/live/shared/jobs-db"
+            "infra/terraform/live/shared/ecs"
+            "infra/terraform/live/services/worker"
+            "infra/terraform/live/shared/step-functions"
+            "infra/terraform/live/services/api"
+            "infra/terraform/live/shared/observability"
+            "infra/terraform/envs/frontend"
+          )
+
+          run_stack() {
+            local command="$1"
+            local stack="$2"
+            echo "::group::${command} ${stack}"
+            (cd "${stack}" && terragrunt "${command}" -input=false -no-color)
+            echo "::endgroup::"
+          }
+
+          run_apply_stack() {
+            local stack="$1"
+            echo "::group::apply ${stack}"
+            (cd "${stack}" && terragrunt apply -input=false -no-color -auto-approve)
+            echo "::endgroup::"
+          }
+
+          run_destroy_stack() {
+            local stack="$1"
+            echo "::group::destroy ${stack}"
+            (cd "${stack}" && terragrunt destroy -input=false -no-color -auto-approve)
+            echo "::endgroup::"
+          }
+
+          ACTION="${{ inputs.action }}"
+          if [[ "${ACTION}" == "destroy" || "${ACTION}" == "destroy-and-recreate" ]]; then
+            if [[ "${{ inputs.confirm_destroy }}" != "destroy morphix dev" ]]; then
+              echo "Destructive actions require exact confirmation."
+              exit 1
+            fi
+          fi
+
+          if [[ "${ACTION}" == "plan" ]]; then
+            for stack in "${STACKS[@]}"; do run_stack plan "${stack}"; done
+          elif [[ "${ACTION}" == "apply" ]]; then
+            for stack in "${STACKS[@]}"; do run_apply_stack "${stack}"; done
+          elif [[ "${ACTION}" == "destroy" ]]; then
+            for (( idx=${#STACKS[@]}-1 ; idx>=0 ; idx-- )); do run_destroy_stack "${STACKS[idx]}"; done
+          elif [[ "${ACTION}" == "destroy-and-recreate" ]]; then
+            for (( idx=${#STACKS[@]}-1 ; idx>=0 ; idx-- )); do run_destroy_stack "${STACKS[idx]}"; done
+            for stack in "${STACKS[@]}"; do run_apply_stack "${stack}"; done
+          fi

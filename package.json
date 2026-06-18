@@ -1,0 +1,23 @@
+{
+  "name": "morphix",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Morphix monorepo for asynchronous file conversion on AWS.",
+  "workspaces": [
+    "apps/frontend"
+  ],
+  "scripts": {
+    "build": "npm run build -w apps/frontend",
+    "dev": "npm run dev -w apps/frontend",
+    "lint": "npm run lint -w apps/frontend",
+    "test": "npm run test:python",
+    "test:python": "python3.11 -m pytest apps/api/tests apps/worker/tests",
+    "test:api": "python3.11 -m pytest apps/api/tests",
+    "test:worker": "python3.11 -m pytest apps/worker/tests"
+  },
+  "engines": {
+    "node": ">=22",
+    "npm": ">=11"
+  }
+}
+
