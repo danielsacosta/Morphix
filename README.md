@@ -36,10 +36,8 @@ There is intentionally no `Taskfile.yml`, matching the MVP scope.
 ```bash
 npm install
 npm run build
-python3.11 -m venv .venv
-source .venv/bin/activate
-pip install -e apps/api[dev] -e apps/worker[dev]
-npm run test:python
+uv sync --all-packages --all-extras
+uv run --group dev pytest
 ```
 
 The API can run locally with fake AWS disabled only if AWS credentials and the required resources exist:
@@ -52,8 +50,10 @@ export JOBS_TABLE_NAME=morphix-dev-jobs
 export INPUT_BUCKET=morphix-dev-input
 export OUTPUT_BUCKET=morphix-dev-output
 export STATE_MACHINE_ARN=arn:aws:states:us-east-1:123456789012:stateMachine:morphix-dev-conversion
-uvicorn morphix_api.main:app --reload
+uv run --group dev uvicorn morphix_api.main:app --reload
 ```
+
+Python dependency management is handled with `uv`. Do not use manual `python -m venv` or direct `pip install` flows for backend development.
 
 ## MVP Limits
 
@@ -71,4 +71,3 @@ uvicorn morphix_api.main:app --reload
 4. Deploy API, worker and frontend via their dedicated workflows.
 
 The Terraform modules use private S3 buckets, short-lived presigned URLs, DynamoDB TTL, CloudWatch logs, Step Functions retries/catches, ECS Fargate isolation, and separated state boundaries.
-

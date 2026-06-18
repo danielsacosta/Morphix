@@ -30,11 +30,12 @@ jobs:
         with:
           python-version: '3.11'
 
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
       - name: Test API
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e apps/api[dev]
-          pytest apps/api/tests
+        run: uv run --group dev pytest apps/api/tests
 
       - uses: hashicorp/setup-terraform@v3
         with:

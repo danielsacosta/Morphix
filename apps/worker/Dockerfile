@@ -15,10 +15,10 @@ RUN apt-get update \
 
 WORKDIR /opt/morphix-worker
 
+COPY --from=ghcr.io/astral-sh/uv:0.9.5 /uv /usr/local/bin/uv
 COPY pyproject.toml README.md ./
 COPY src ./src
 
-RUN pip install --no-cache-dir .
+RUN uv pip install --system --no-cache .
 
 ENTRYPOINT ["python", "-m", "morphix_worker"]
-

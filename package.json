@@ -11,13 +11,12 @@
     "dev": "npm run dev -w apps/frontend",
     "lint": "npm run lint -w apps/frontend",
     "test": "npm run test:python",
-    "test:python": "python3.11 -m pytest apps/api/tests apps/worker/tests",
-    "test:api": "python3.11 -m pytest apps/api/tests",
-    "test:worker": "python3.11 -m pytest apps/worker/tests"
+    "test:python": "uv run --group dev pytest",
+    "test:api": "uv run --group dev pytest apps/api/tests",
+    "test:worker": "uv run --group dev pytest apps/worker/tests"
   },
   "engines": {
     "node": ">=22",
     "npm": ">=11"
   }
 }
-
