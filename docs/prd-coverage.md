@@ -22,13 +22,13 @@ This checklist maps the PRD to implemented repository assets.
 | --- | --- | --- |
 | RF-01 | Covered | Frontend file picker and direct upload flow in `apps/frontend/src/App.tsx`. |
 | RF-02 | Covered | Format selector uses `SUPPORTED_CONVERSIONS` from `apps/frontend/src/conversions.ts`. |
-| RF-03 | Covered | `POST /jobs` in `apps/api/src/morphix_api/main.py`. |
+| RF-03 | Covered | `POST /jobs` in `apps/api/src/morphix_api/adapters/inbound/http/routes/jobs.py`. |
 | RF-04 | Covered | `POST /jobs/{job_id}/upload-url`. |
 | RF-05 | Covered | Frontend uploads using the presigned PUT URL. |
 | RF-06 | Covered | `POST /jobs/{job_id}/start` starts Step Functions. |
 | RF-07 | Covered | State machine uses `arn:aws:states:::ecs:runTask.sync`. |
-| RF-08 | Covered | Worker downloads input from S3 in `apps/worker/src/morphix_worker/storage.py`. |
-| RF-09 | Covered | Worker converters use LibreOffice, FFmpeg, ImageMagick and Python libraries; no external conversion API. |
+| RF-08 | Covered | Worker downloads input through the storage port and S3 adapter in `apps/worker/src/morphix_worker/adapters/outbound/s3/object_storage.py`. |
+| RF-09 | Covered | Worker converters live under `apps/worker/src/morphix_worker/converters`; no external conversion API. |
 | RF-10 | Covered | Worker uploads converted result to S3. |
 | RF-11 | Covered | Worker updates DynamoDB status on completion/failure. |
 | RF-12 | Covered | Frontend polls `GET /jobs/{job_id}`. |
@@ -75,4 +75,3 @@ This checklist maps the PRD to implemented repository assets.
 | Separate input/output buckets | `storage` module. |
 | CloudWatch dashboards and alarms | `observability` module. |
 | Configurable limits | Environment variables and Terraform inputs. |
-

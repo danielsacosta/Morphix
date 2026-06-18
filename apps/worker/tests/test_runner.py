@@ -2,20 +2,22 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from morphix_worker.config import Settings
-from morphix_worker.models import ConversionJob
-from morphix_worker.runner import WorkerRunner
+from morphix_worker.application.pipeline.run_conversion_job import ConversionJobPipeline
+from morphix_worker.core.config import Settings
+from morphix_worker.core.workspace import TempWorkspaceManager
+from morphix_worker.domain.entities.conversion_job import ConversionJob
+from morphix_worker.domain.value_objects.storage_object import StorageObject
 
 
 class FakeStorage:
     def __init__(self) -> None:
         self.uploads: list[tuple[str, str, Path]] = []
 
-    def download(self, bucket: str, key: str, destination: Path) -> None:
+    def download(self, source: StorageObject, destination: Path) -> None:
         destination.write_text("a,b\n1,2\n", encoding="utf-8")
 
-    def upload(self, bucket: str, key: str, source: Path) -> None:
-        self.uploads.append((bucket, key, source))
+    def upload(self, destination: StorageObject, source: Path) -> None:
+        self.uploads.append((destination.bucket, destination.key, source))
 
 
 class FakeRepository:
@@ -61,8 +63,7 @@ def job() -> ConversionJob:
     return ConversionJob(
         job_id="job-1",
         user_id="user-1",
-        input_bucket="input",
-        input_key="input/user-1/job-1/file.csv",
+        input_object=StorageObject(bucket="input", key="input/user-1/job-1/file.csv"),
         output_bucket="output",
         output_key="output/user-1/job-1/file.xlsx",
         source_format="csv",
@@ -73,21 +74,34 @@ def job() -> ConversionJob:
 def test_runner_uploads_and_marks_completed(tmp_path: Path) -> None:
     storage = FakeStorage()
     repository = FakeRepository()
-    runner = WorkerRunner(settings(tmp_path), storage, repository, converters=FakeConverters())
+    app_settings = settings(tmp_path)
+    runner = ConversionJobPipeline(
+        storage=storage,
+        repository=repository,
+        converters=FakeConverters(),
+        workspace_manager=TempWorkspaceManager(app_settings.workdir),
+        timeout_seconds=app_settings.conversion_timeout_seconds,
+    )
 
     result = runner.run(job())
 
-    assert result["status"] == "COMPLETED"
+    assert result.status == "COMPLETED"
     assert storage.uploads[0][1] == "output/user-1/job-1/file.xlsx"
     assert repository.events == [("job-1", "PROCESSING"), ("job-1", "COMPLETED")]
 
 
 def test_runner_marks_failed_on_conversion_error(tmp_path: Path) -> None:
     repository = FakeRepository()
-    runner = WorkerRunner(settings(tmp_path), FakeStorage(), repository, converters=FailingConverters())
+    app_settings = settings(tmp_path)
+    runner = ConversionJobPipeline(
+        storage=FakeStorage(),
+        repository=repository,
+        converters=FailingConverters(),
+        workspace_manager=TempWorkspaceManager(app_settings.workdir),
+        timeout_seconds=app_settings.conversion_timeout_seconds,
+    )
 
     result = runner.run(job())
 
-    assert result["status"] == "FAILED"
+    assert result.status == "FAILED"
     assert repository.events == [("job-1", "PROCESSING"), ("job-1", "FAILED")]
-

@@ -2,16 +2,24 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from morphix_api.aws_clients import FakeConversionGateway
-from morphix_api.config import Settings
-from morphix_api.main import app, get_gateway, get_repository, get_settings
-from morphix_api.models import JobStatus
-from morphix_api.repository import InMemoryJobsRepository
+from morphix_api.adapters.inbound.http.dependencies import (
+    get_conversion_orchestrator,
+    get_object_url_service,
+    get_repository,
+    get_settings,
+)
+from morphix_api.application.ports.conversion_orchestrator import FakeConversionOrchestrator
+from morphix_api.application.ports.jobs_repository import InMemoryJobsRepository
+from morphix_api.application.ports.object_url_service import FakeObjectUrlService
+from morphix_api.core.config import Settings
+from morphix_api.domain.value_objects.job_status import JobStatus
+from morphix_api.main import app
 
 
-def make_client() -> tuple[TestClient, InMemoryJobsRepository, FakeConversionGateway]:
+def make_client() -> tuple[TestClient, InMemoryJobsRepository, FakeConversionOrchestrator]:
     repository = InMemoryJobsRepository()
-    gateway = FakeConversionGateway()
+    object_url_service = FakeObjectUrlService()
+    orchestrator = FakeConversionOrchestrator()
     settings = Settings(
         project_name="morphix",
         environment="test",
@@ -24,9 +32,10 @@ def make_client() -> tuple[TestClient, InMemoryJobsRepository, FakeConversionGat
         allowed_origins=["http://localhost:5173"],
     )
     app.dependency_overrides[get_repository] = lambda: repository
-    app.dependency_overrides[get_gateway] = lambda: gateway
+    app.dependency_overrides[get_object_url_service] = lambda: object_url_service
+    app.dependency_overrides[get_conversion_orchestrator] = lambda: orchestrator
     app.dependency_overrides[get_settings] = lambda: settings
-    return TestClient(app), repository, gateway
+    return TestClient(app), repository, orchestrator
 
 
 def create_docx_job(client: TestClient) -> str:
@@ -109,4 +118,3 @@ def test_lists_only_current_user_jobs() -> None:
     assert response.status_code == 200
     assert len(response.json()["jobs"]) == 1
     assert response.json()["jobs"][0]["user_id"] == "user-1"
-
