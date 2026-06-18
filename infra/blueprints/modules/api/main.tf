@@ -1,22 +1,7 @@
 locals {
   name           = "${var.project_name}-${var.environment}"
-  create_runtime = var.api_image_uri != ""
+  create_runtime = var.api_package_path != ""
   log_group      = "/aws/lambda/${local.name}-api"
-}
-
-resource "aws_ecr_repository" "api" {
-  name                 = "${local.name}-api"
-  image_tag_mutability = "MUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-
-  encryption_configuration {
-    encryption_type = "AES256"
-  }
-
-  tags = var.tags
 }
 
 resource "aws_cloudwatch_log_group" "api" {
@@ -75,12 +60,16 @@ resource "aws_iam_role_policy" "api" {
 resource "aws_lambda_function" "api" {
   count = local.create_runtime ? 1 : 0
 
-  function_name = "${local.name}-api"
-  role          = aws_iam_role.api.arn
-  package_type  = "Image"
-  image_uri     = var.api_image_uri
-  timeout       = 30
-  memory_size   = 512
+  function_name    = "${local.name}-api"
+  role             = aws_iam_role.api.arn
+  package_type     = "Zip"
+  filename         = var.api_package_path
+  source_code_hash = filebase64sha256(var.api_package_path)
+  runtime          = "python3.11"
+  handler          = "morphix_api.main.handler"
+  architectures    = ["x86_64"]
+  timeout          = 30
+  memory_size      = 512
 
   environment {
     variables = {

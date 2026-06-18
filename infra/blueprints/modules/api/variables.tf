@@ -14,9 +14,9 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
-variable "api_image_uri" {
+variable "api_package_path" {
   type        = string
-  description = "Lambda container image URI. If empty, a public bootstrap Lambda image is used."
+  description = "Local path to the Lambda zip package. If empty, the API runtime is not created."
   default     = ""
 }
 

@@ -65,12 +65,12 @@ The infrastructure is provisioned with Terraform modules and Terragrunt live sta
 - ECS Fargate runs isolated worker tasks from ECR images.
 - DynamoDB stores job metadata, ownership and status.
 - CloudWatch captures logs and operational telemetry.
-- GitHub Actions builds, tests and deploys frontend, API, worker images and infrastructure changes.
+- GitHub Actions builds, tests and deploys frontend, API Lambda packages, worker images and infrastructure changes.
 
 ## Repository Layout
 
 - `apps/frontend`: React + TypeScript + Vite conversion UI.
-- `apps/api`: FastAPI service for jobs, presigned URLs, ownership checks and Step Functions starts.
+- `apps/api`: FastAPI Lambda service for jobs, presigned URLs, ownership checks and Step Functions starts.
 - `apps/worker`: Dockerized Python worker using local conversion engines.
 - `infra/blueprints`: reusable Terraform modules and remote-state bootstrap.
 - `infra/terraform`: Terragrunt live stacks.
@@ -113,9 +113,9 @@ Python dependency management is handled with `uv`. Do not use manual `python -m 
 
 ## Deploy
 
-1. Configure GitHub OIDC and AWS role ARN as repository variables/secrets used by workflows.
+1. Configure `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` as repository secrets, and `AWS_REGION` as a repository variable.
 2. Bootstrap Terraform state from `infra/blueprints/bootstrap`.
 3. Run `.github/workflows/infra-lifecycle.yml` with `plan` or `apply`.
-4. Deploy API, worker and frontend via their dedicated workflows.
+4. Deploy API, worker and frontend via their dedicated workflows. The API Lambda is packaged with `apps/api/scripts/build_lambda.sh`; the worker remains a Docker/ECR image because it runs on ECS Fargate.
 
 The Terraform modules use private S3 buckets, short-lived presigned URLs, DynamoDB TTL, CloudWatch logs, Step Functions retries/catches, ECS Fargate isolation, and separated state boundaries.

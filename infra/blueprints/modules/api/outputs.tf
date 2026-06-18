@@ -1,7 +1,3 @@
-output "api_repository_url" {
-  value = aws_ecr_repository.api.repository_url
-}
-
 output "api_endpoint" {
   value = length(aws_apigatewayv2_api.api) > 0 ? aws_apigatewayv2_api.api[0].api_endpoint : ""
 }

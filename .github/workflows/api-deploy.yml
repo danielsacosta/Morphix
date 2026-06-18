@@ -12,10 +12,11 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   PROJECT_NAME: morphix
   ENVIRONMENT: dev
   TERRAGRUNT_VERSION: 0.98.0
@@ -37,6 +38,10 @@ jobs:
       - name: Test API
         run: uv run --group dev pytest apps/api/tests
 
+      - name: Build API Lambda package
+        working-directory: apps/api
+        run: ./scripts/build_lambda.sh
+
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.5.7
@@ -48,27 +53,12 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Ensure API ECR repository
-        working-directory: infra/terraform/live/services/api
-        run: terragrunt apply -input=false -no-color -auto-approve
-
-      - name: Login to ECR
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build and push API image
+      - name: Apply API Lambda runtime
         working-directory: infra/terraform/live/services/api
         run: |
-          REPOSITORY_URL="$(terragrunt output -raw api_repository_url)"
-          IMAGE_URI="${REPOSITORY_URL}:${GITHUB_SHA}"
-          docker build -t "${IMAGE_URI}" ../../../../../apps/api
-          docker tag "${IMAGE_URI}" "${REPOSITORY_URL}:latest"
-          docker push "${IMAGE_URI}"
-          docker push "${REPOSITORY_URL}:latest"
-          echo "API_IMAGE_URI=${IMAGE_URI}" >> "$GITHUB_ENV"
-
-      - name: Apply API runtime
-        working-directory: infra/terraform/live/services/api
-        run: API_IMAGE_URI="${API_IMAGE_URI}" terragrunt apply -input=false -no-color -auto-approve
+          API_LAMBDA_PACKAGE="${GITHUB_WORKSPACE}/apps/api/lambda_dist/morphix-api.zip" \
+            terragrunt apply -input=false -no-color -auto-approve
