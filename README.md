@@ -70,7 +70,7 @@ The infrastructure is provisioned with Terraform modules and Terragrunt live sta
 
 ## Repository Layout
 
-- `apps/frontend`: React + TypeScript + Vite conversion UI.
+- `apps/frontend`: Bun-managed React + TypeScript + Vite conversion UI.
 - `apps/api`: FastAPI Lambda service for jobs, presigned URLs, ownership checks and Step Functions starts.
 - `apps/worker`: Dockerized Python worker using local conversion engines.
 - `infra/blueprints`: reusable Terraform modules and remote-state bootstrap. The conversion state machine lives in the API module, not in a hidden shared stack.
@@ -83,8 +83,8 @@ There is intentionally no `Taskfile.yml`, matching the MVP scope.
 ## Local Verification
 
 ```bash
-npm install
-npm run build
+bun install --frozen-lockfile
+bun run build
 uv sync --all-packages --all-extras
 uv run --group dev pytest
 ```
@@ -115,8 +115,7 @@ Python dependency management is handled with `uv`. Do not use manual `python -m 
 ## Deploy
 
 1. Configure `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` as repository secrets. `AWS_REGION` is fixed in workflows as `us-east-1` to avoid repository-variable context warnings.
-2. Bootstrap Terraform state from `infra/blueprints/bootstrap`.
-3. Run `.github/workflows/infra-lifecycle.yml` with `plan` or `apply`.
-4. Deploy backend through `.github/workflows/backend-deploy.yml`, selecting `api`, `worker` or `both` for manual runs. On push, the workflow detects API and worker path changes and deploys only the affected backend components. The API Lambda is packaged with `apps/api/scripts/build_lambda.sh`; the worker remains a Docker/ECR image because it runs on ECS Fargate.
+2. Run `.github/workflows/infra-lifecycle.yml` with `plan` or `apply`. The workflow bootstraps the Terraform S3 state bucket and DynamoDB lock table if they do not exist. Destroy flows stop running conversions and empty project buckets/ECR images before Terragrunt destroys stacks.
+3. Deploy backend through `.github/workflows/backend-deploy.yml`, selecting `api`, `worker` or `both` for manual runs. On push, the workflow detects API and worker path changes and deploys only the affected backend components. The API Lambda is packaged with `apps/api/scripts/build_lambda.sh`; the worker remains a Docker/ECR image because it runs on ECS Fargate.
 
 The Terraform modules use private S3 buckets, short-lived presigned URLs, DynamoDB TTL, CloudWatch logs, Step Functions retries/catches, ECS Fargate isolation, and separated state boundaries.

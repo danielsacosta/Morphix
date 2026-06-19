@@ -17,6 +17,6 @@ inputs = {
   output_retention_days = 7
   max_upload_size_mb    = 100
   allowed_origins       = split(",", get_env("ALLOWED_ORIGINS", "http://localhost:5173"))
+  force_destroy         = get_env("STORAGE_FORCE_DESTROY", "false") == "true"
   tags                  = local.root.locals.tags
 }
-

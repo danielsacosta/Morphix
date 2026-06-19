@@ -35,6 +35,12 @@ variable "worker_image_uri" {
   default     = ""
 }
 
+variable "repository_force_delete" {
+  type        = bool
+  description = "Allow ECR repository deletion with images during destroy."
+  default     = false
+}
+
 variable "worker_cpu" {
   type        = number
   description = "Fargate task CPU."

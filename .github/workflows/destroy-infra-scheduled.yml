@@ -23,7 +23,7 @@ env:
 
 jobs:
   destroy:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,6 +43,9 @@ jobs:
           aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Bootstrap Terraform remote state
+        run: bash .github/scripts/bootstrap-terraform-state.sh
+
       - name: Validate manual confirmation
         if: github.event_name == 'workflow_dispatch'
         run: |
@@ -51,10 +54,17 @@ jobs:
             exit 1
           fi
 
+      - name: Pre-destroy cleanup
+        run: bash .github/scripts/pre-destroy-cleanup.sh
+
       - name: Destroy stacks in reverse order
         shell: bash
         run: |
           set -euo pipefail
+          export FRONTEND_FORCE_DESTROY=true
+          export STORAGE_FORCE_DESTROY=true
+          export WORKER_REPOSITORY_FORCE_DELETE=true
+
           STACKS=(
             "infra/terraform/envs/frontend"
             "infra/terraform/live/shared/observability"

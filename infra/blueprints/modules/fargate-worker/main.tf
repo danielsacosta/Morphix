@@ -8,6 +8,7 @@ locals {
 resource "aws_ecr_repository" "worker" {
   name                 = "${local.name}-worker"
   image_tag_mutability = "MUTABLE"
+  force_delete         = var.repository_force_delete
 
   image_scanning_configuration {
     scan_on_push = true

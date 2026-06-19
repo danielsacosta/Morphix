@@ -67,6 +67,21 @@ jobs:
           aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Bootstrap Terraform remote state
+        run: bash .github/scripts/bootstrap-terraform-state.sh
+
+      - name: Validate destructive confirmation
+        if: inputs.action == 'destroy' || inputs.action == 'destroy-and-recreate'
+        run: |
+          if [[ "${{ inputs.confirm_destroy }}" != "destroy morphix dev" ]]; then
+            echo "Destructive actions require exact confirmation."
+            exit 1
+          fi
+
+      - name: Pre-destroy cleanup
+        if: inputs.action == 'destroy' || inputs.action == 'destroy-and-recreate'
+        run: bash .github/scripts/pre-destroy-cleanup.sh
+
       - name: Run lifecycle action
         shell: bash
         run: |
@@ -110,6 +125,9 @@ jobs:
               echo "Destructive actions require exact confirmation."
               exit 1
             fi
+            export FRONTEND_FORCE_DESTROY=true
+            export STORAGE_FORCE_DESTROY=true
+            export WORKER_REPOSITORY_FORCE_DELETE=true
           fi
 
           if [[ "${ACTION}" == "plan" ]]; then
@@ -120,5 +138,6 @@ jobs:
             for (( idx=${#STACKS[@]}-1 ; idx>=0 ; idx-- )); do run_destroy_stack "${STACKS[idx]}"; done
           elif [[ "${ACTION}" == "destroy-and-recreate" ]]; then
             for (( idx=${#STACKS[@]}-1 ; idx>=0 ; idx-- )); do run_destroy_stack "${STACKS[idx]}"; done
+            unset FRONTEND_FORCE_DESTROY STORAGE_FORCE_DESTROY WORKER_REPOSITORY_FORCE_DELETE
             for stack in "${STACKS[@]}"; do run_apply_stack "${stack}"; done
           fi

@@ -51,6 +51,7 @@ inputs = {
   vpc_id                       = dependency.network.outputs.vpc_id
   private_subnet_ids           = dependency.network.outputs.private_subnet_ids
   worker_image_uri             = get_env("WORKER_IMAGE_URI", "")
+  repository_force_delete      = get_env("WORKER_REPOSITORY_FORCE_DELETE", "false") == "true"
   worker_cpu                   = 1024
   worker_memory                = 2048
   worker_ephemeral_storage_gib = 30

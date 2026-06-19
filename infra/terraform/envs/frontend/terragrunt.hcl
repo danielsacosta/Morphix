@@ -22,7 +22,7 @@ inputs = {
   project_name           = local.root.locals.project_name
   environment            = local.root.locals.environment
   frontend_bucket_name   = get_env("FRONTEND_BUCKET_NAME", "")
-  frontend_force_destroy = false
+  frontend_force_destroy = get_env("FRONTEND_FORCE_DESTROY", "false") == "true"
   frontend_price_class   = "PriceClass_100"
   api_base_url           = dependency.api.outputs.api_endpoint
   max_file_size_mb       = 100

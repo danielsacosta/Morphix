@@ -3,20 +3,20 @@
   "version": "0.1.0",
   "private": true,
   "description": "Morphix monorepo for asynchronous file conversion on AWS.",
+  "packageManager": "bun@1.3.14",
   "workspaces": [
     "apps/frontend"
   ],
   "scripts": {
-    "build": "npm run build -w apps/frontend",
-    "dev": "npm run dev -w apps/frontend",
-    "lint": "npm run lint -w apps/frontend",
-    "test": "npm run test:python",
+    "build": "bun --filter @morphix/frontend build",
+    "dev": "bun --filter @morphix/frontend dev",
+    "lint": "bun --filter @morphix/frontend lint",
+    "test": "bun run test:python",
     "test:python": "uv run --group dev pytest",
     "test:api": "uv run --group dev pytest apps/api/tests",
     "test:worker": "uv run --group dev pytest apps/worker/tests"
   },
   "engines": {
-    "node": ">=22",
-    "npm": ">=11"
+    "bun": ">=1.3.14"
   }
 }
