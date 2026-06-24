@@ -27,6 +27,10 @@ locals {
   )
 }
 
+data "aws_caller_identity" "current" {}
+
+data "aws_partition" "current" {}
+
 resource "aws_cloudwatch_log_group" "api" {
   name              = local.log_group
   retention_in_days = 14
@@ -202,6 +206,12 @@ data "aws_iam_policy_document" "state_machine" {
     sid       = "RunWorkerTask"
     actions   = ["ecs:RunTask", "ecs:StopTask", "ecs:DescribeTasks"]
     resources = ["*"]
+  }
+
+  statement {
+    sid       = "ManageEcsSyncEventsRule"
+    actions   = ["events:PutRule", "events:PutTargets", "events:DescribeRule"]
+    resources = ["arn:${data.aws_partition.current.partition}:events:${var.aws_region}:${data.aws_caller_identity.current.account_id}:rule/StepFunctionsGetEventsForECSTaskRule"]
   }
 
   statement {
