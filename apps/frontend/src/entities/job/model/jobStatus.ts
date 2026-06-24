@@ -11,18 +11,6 @@ export const statusLabel: Record<JobStatus, string> = {
   DELETED: 'Eliminado',
 };
 
-export const statusTone: Record<JobStatus, string> = {
-  PENDING: 'neutral',
-  UPLOAD_REQUESTED: 'accent',
-  UPLOADED: 'accent',
-  PROCESSING: 'warn',
-  COMPLETED: 'success',
-  FAILED: 'danger',
-  EXPIRED: 'danger',
-  DELETED: 'neutral',
-};
-
 export function isActiveJobStatus(status: JobStatus): boolean {
   return ['PENDING', 'UPLOAD_REQUESTED', 'UPLOADED', 'PROCESSING'].includes(status);
 }
-

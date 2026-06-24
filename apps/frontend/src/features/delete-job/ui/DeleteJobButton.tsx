@@ -1,4 +1,6 @@
 import { Loader2, Trash2 } from 'lucide-react';
+import { Button } from '../../../shared/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../../shared/ui/tooltip';
 import { useDeleteJob } from '../model/useDeleteJob';
 
 interface DeleteJobButtonProps {
@@ -11,9 +13,20 @@ export function DeleteJobButton({ jobId, onDeleted, onError }: DeleteJobButtonPr
   const deletion = useDeleteJob(onDeleted, onError);
 
   return (
-    <button className="icon-button danger" type="button" onClick={() => deletion.mutate(jobId)} disabled={deletion.isPending} aria-label="Eliminar job">
-      {deletion.isPending ? <Loader2 className="spin" aria-hidden="true" /> : <Trash2 aria-hidden="true" />}
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="destructive"
+          size="icon"
+          type="button"
+          onClick={() => deletion.mutate(jobId)}
+          disabled={deletion.isPending}
+          aria-label="Eliminar job"
+        >
+          {deletion.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Trash2 className="size-4" aria-hidden="true" />}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>Eliminar job</TooltipContent>
+    </Tooltip>
   );
 }
-

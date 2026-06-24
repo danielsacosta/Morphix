@@ -1,6 +1,8 @@
 import { ArrowDownToLine, Loader2 } from 'lucide-react';
 import { useDownloadJobResult } from '../model/useDownloadJobResult';
 import type { JobRecord } from '../../../entities/job';
+import { Button } from '../../../shared/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../../shared/ui/tooltip';
 
 interface DownloadJobButtonProps {
   job: JobRecord;
@@ -14,17 +16,25 @@ export function DownloadJobButton({ job, variant = 'text', onError }: DownloadJo
 
   if (variant === 'icon') {
     return (
-      <button className="icon-button" type="button" onClick={() => download.mutate(job)} disabled={disabled} aria-label="Descargar resultado">
-        {download.isPending ? <Loader2 className="spin" aria-hidden="true" /> : <ArrowDownToLine aria-hidden="true" />}
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="outline" size="icon" type="button" onClick={() => download.mutate(job)} disabled={disabled} aria-label="Descargar resultado">
+            {download.isPending ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <ArrowDownToLine className="size-4" aria-hidden="true" />
+            )}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Descargar resultado</TooltipContent>
+      </Tooltip>
     );
   }
 
   return (
-    <button className="secondary-action" type="button" onClick={() => download.mutate(job)} disabled={disabled}>
-      {download.isPending ? <Loader2 className="spin" aria-hidden="true" /> : <ArrowDownToLine aria-hidden="true" />}
+    <Button variant="outline" type="button" onClick={() => download.mutate(job)} disabled={disabled}>
+      {download.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <ArrowDownToLine className="size-4" aria-hidden="true" />}
       Descargar
-    </button>
+    </Button>
   );
 }
-

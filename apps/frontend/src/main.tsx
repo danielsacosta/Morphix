@@ -10,6 +10,8 @@ if (!rootElement) {
   throw new Error('Root element not found.');
 }
 
+document.documentElement.classList.add('dark');
+
 void loadRuntimeConfig().finally(() => {
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>

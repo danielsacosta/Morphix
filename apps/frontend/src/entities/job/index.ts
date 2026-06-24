@@ -1,6 +1,6 @@
 export { deleteJob, getDownloadUrl, getJob, listJobs } from './api/jobsApi';
 export { jobQueries } from './model/jobQueries';
-export { isActiveJobStatus, statusLabel, statusTone } from './model/jobStatus';
+export { isActiveJobStatus, statusLabel } from './model/jobStatus';
 export { useJobPolling } from './model/useJobPolling';
 export { useJobsHistory } from './model/useJobsHistory';
 export { JobHistoryRow } from './ui/JobHistoryRow';
