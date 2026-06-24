@@ -102,7 +102,6 @@ resource "aws_lambda_function" "api" {
     variables = {
       PROJECT_NAME      = var.project_name
       ENVIRONMENT       = var.environment
-      AWS_REGION        = var.aws_region
       JOBS_TABLE_NAME   = var.jobs_table_name
       INPUT_BUCKET      = var.input_bucket_name
       OUTPUT_BUCKET     = var.output_bucket_name
