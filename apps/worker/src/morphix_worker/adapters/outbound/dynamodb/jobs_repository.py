@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from decimal import Decimal
 
 import boto3
 
@@ -11,6 +12,14 @@ from ....domain.value_objects.job_status import JobStatus
 
 def utc_now_iso() -> str:
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
+
+
+def dynamodb_value(value: object) -> object:
+    if isinstance(value, JobStatus):
+        return value.value
+    if isinstance(value, float):
+        return Decimal(str(value))
+    return value
 
 
 class DynamoDBJobRepository(JobsRepository):
@@ -27,7 +36,7 @@ class DynamoDBJobRepository(JobsRepository):
             name = f"#n{index}"
             token = f":v{index}"
             names[name] = key
-            values[token] = value.value if isinstance(value, JobStatus) else value
+            values[token] = dynamodb_value(value)
             parts.append(f"{name} = {token}")
 
         self._table.update_item(
@@ -56,4 +65,3 @@ class DynamoDBJobRepository(JobsRepository):
         if duration_seconds is not None:
             updates["duration_seconds"] = round(duration_seconds, 3)
         self._update(job_id, updates)
-

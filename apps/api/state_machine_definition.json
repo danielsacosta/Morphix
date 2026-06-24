@@ -61,10 +61,9 @@
       "Retry": [
         {
           "ErrorEquals": [
-            "States.TaskFailed",
             "ECS.AmazonECSException"
           ],
-          "IntervalSeconds": 10,
+          "IntervalSeconds": 5,
           "MaxAttempts": 2,
           "BackoffRate": 2
         }
@@ -135,7 +134,12 @@
           }
         }
       },
-      "End": true
+      "Next": "FailWorkflow"
+    },
+    "FailWorkflow": {
+      "Type": "Fail",
+      "Error": "WorkerFailed",
+      "Cause": "The conversion worker failed."
     }
   }
 }
