@@ -24,6 +24,10 @@ function upsertJob(previous: JobRecord[] | undefined, job: JobRecord, sorter: (j
   return sorter(next);
 }
 
+function removeJob(previous: JobRecord[] | undefined, jobId: string): JobRecord[] {
+  return previous?.filter((job) => job.job_id !== jobId) ?? [];
+}
+
 function buildSocketUrl(baseUrl: string, userId: string): string {
   const url = new URL(baseUrl);
   url.searchParams.set('user_id', userId);
@@ -57,6 +61,15 @@ export function useJobRealtime() {
           return;
         }
         if (event.type !== 'job.updated' || !event.job?.job_id) return;
+
+        if (event.job.status === 'DELETED') {
+          queryClient.removeQueries({ queryKey: jobQueries.detail(event.job.job_id) });
+          queryClient.setQueryData<JobRecord[]>(jobQueries.list(), (previous) => removeJob(previous, event.job.job_id));
+          if (event.job.batch_id) {
+            queryClient.setQueryData<JobRecord[]>(jobQueries.batch(event.job.batch_id), (previous) => removeJob(previous, event.job.job_id));
+          }
+          return;
+        }
 
         queryClient.setQueryData<JobRecord>(jobQueries.detail(event.job.job_id), (previous) => (previous ? { ...previous, ...event.job } : event.job));
         queryClient.setQueryData<JobRecord[]>(jobQueries.list(), (previous) => upsertJob(previous, event.job, sortByCreatedAt));

@@ -9,7 +9,7 @@ export async function getJob(jobId: string): Promise<JobRecord> {
 export async function listJobs(batchId?: string): Promise<JobRecord[]> {
   const query = batchId ? `?batch_id=${encodeURIComponent(batchId)}` : '';
   const response = await httpRequest<{ jobs: JobRecord[] }>(`/jobs${query}`);
-  return response.jobs;
+  return response.jobs.filter((job) => job.status !== 'DELETED');
 }
 
 export async function getDownloadUrl(jobId: string): Promise<DownloadUrlResponse> {

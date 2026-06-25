@@ -121,6 +121,19 @@ def test_lists_only_current_user_jobs() -> None:
     assert response.json()["jobs"][0]["user_id"] == "user-1"
 
 
+def test_deleted_job_is_removed_from_history() -> None:
+    client, _, _ = make_client()
+    job_id = create_docx_job(client)
+
+    deleted = client.delete(f"/jobs/{job_id}", headers={"X-User-Id": "user-1"})
+    assert deleted.status_code == 200
+    assert deleted.json()["job"]["status"] == "DELETED"
+
+    response = client.get("/jobs", headers={"X-User-Id": "user-1"})
+    assert response.status_code == 200
+    assert response.json()["jobs"] == []
+
+
 def test_creates_batch_jobs_with_positions() -> None:
     client, _, _ = make_client()
     response = client.post(

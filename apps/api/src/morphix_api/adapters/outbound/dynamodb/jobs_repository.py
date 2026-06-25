@@ -31,6 +31,7 @@ class DynamoDBJobsRepository(JobsRepository):
             Limit=limit,
         )
         jobs = [Job.from_item(item) for item in response.get("Items", [])]
+        jobs = [job for job in jobs if job.status != JobStatus.deleted]
         if batch_id:
             jobs = [job for job in jobs if job.batch_id == batch_id]
         return jobs
