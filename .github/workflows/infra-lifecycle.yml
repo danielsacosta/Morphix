@@ -67,9 +67,6 @@ jobs:
           aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Bootstrap Terraform remote state
-        run: bash .github/scripts/bootstrap-terraform-state.sh
-
       - name: Validate destructive confirmation
         if: inputs.action == 'destroy' || inputs.action == 'destroy-and-recreate'
         run: |
@@ -77,6 +74,9 @@ jobs:
             echo "Destructive actions require exact confirmation."
             exit 1
           fi
+
+      - name: Bootstrap Terraform remote state
+        run: bash .github/scripts/bootstrap-terraform-state.sh
 
       - name: Pre-destroy cleanup
         if: inputs.action == 'destroy' || inputs.action == 'destroy-and-recreate'
@@ -157,3 +157,7 @@ jobs:
             for stack in "${STACKS[@]}"; do run_apply_stack "${stack}"; done
             refresh_browser_cors
           fi
+
+      - name: Post-destroy final cleanup
+        if: inputs.action == 'destroy'
+        run: bash .github/scripts/post-destroy-cleanup.sh

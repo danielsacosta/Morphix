@@ -43,9 +43,6 @@ jobs:
           aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Bootstrap Terraform remote state
-        run: bash .github/scripts/bootstrap-terraform-state.sh
-
       - name: Validate manual confirmation
         if: github.event_name == 'workflow_dispatch'
         run: |
@@ -53,6 +50,9 @@ jobs:
             echo "Missing destructive action confirmation."
             exit 1
           fi
+
+      - name: Bootstrap Terraform remote state
+        run: bash .github/scripts/bootstrap-terraform-state.sh
 
       - name: Pre-destroy cleanup
         run: bash .github/scripts/pre-destroy-cleanup.sh
@@ -80,3 +80,6 @@ jobs:
             (cd "${stack}" && terragrunt destroy -input=false -no-color -auto-approve)
             echo "::endgroup::"
           done
+
+      - name: Post-destroy final cleanup
+        run: bash .github/scripts/post-destroy-cleanup.sh
