@@ -42,4 +42,3 @@ def require_user_id(x_user_id: Annotated[str | None, Header(alias="X-User-Id")] 
     if len(user_id) > 128:
         raise AuthenticationRequiredError("X-User-Id is too long")
     return user_id
-

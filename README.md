@@ -32,7 +32,6 @@ The API follows Hexagonal Architecture because FastAPI/API Gateway is only one i
 - `application/ports`: contracts required by use cases, such as job persistence, object URLs and conversion orchestration.
 - `adapters/inbound/http`: FastAPI routes, schemas, dependency wiring and error mapping.
 - `adapters/outbound`: concrete AWS implementations for DynamoDB, S3 presigned URLs and Step Functions.
-- `apps/api/state_machine_definition.json`: API-owned Step Functions ASL definition deployed with the API stack.
 - `core`: runtime configuration, security helpers and time utilities.
 
 Dependency direction is kept inward: inbound adapters call use cases, use cases depend on ports, and outbound adapters implement those ports.
@@ -57,13 +56,14 @@ The pipeline depends on ports, not on S3, DynamoDB, ECS or specific conversion b
 
 ![Morphix AWS infrastructure](docs/assets/architecture/infra-aws.png)
 
-The infrastructure is provisioned with Terraform modules and Terragrunt live stacks. The runtime path is intentionally asynchronous: the frontend is delivered from S3 through CloudFront, the API receives job requests through API Gateway/Lambda, Step Functions coordinates the conversion workflow, and ECS Fargate runs the worker container.
+The infrastructure is provisioned with Terraform modules and Terragrunt live stacks. The runtime path is intentionally asynchronous: the frontend is delivered from S3 through CloudFront, the API receives job requests through API Gateway/Lambda, Step Functions orchestrates each conversion, SQS buffers worker execution, and one ECS Fargate worker service consumes the queue sequentially.
 
 - CloudFront and S3 deliver the React/Vite frontend.
 - API Gateway invokes the FastAPI Lambda adapter.
 - Private S3 buckets store input and output objects through short-lived presigned URLs.
-- Step Functions starts and tracks conversion orchestration from the API infrastructure scope.
-- ECS Fargate runs isolated worker tasks from ECR images.
+- Step Functions owns conversion orchestration, status transitions and worker callbacks.
+- SQS keeps conversion jobs durable, retries worker pickup failures and moves poison messages to a DLQ.
+- ECS Fargate runs the isolated worker service from ECR images with `desired_count = 1`.
 - DynamoDB stores job metadata, ownership and status.
 - CloudWatch captures logs and operational telemetry.
 - GitHub Actions builds, tests and deploys frontend, API Lambda packages, worker images and infrastructure changes. Frontend runtime variables are not injected by workflows; Terraform publishes them as S3 runtime config.
@@ -71,9 +71,9 @@ The infrastructure is provisioned with Terraform modules and Terragrunt live sta
 ## Repository Layout
 
 - `apps/frontend`: Bun-managed React + TypeScript + Vite conversion UI.
-- `apps/api`: FastAPI Lambda service for jobs, presigned URLs, ownership checks and Step Functions starts.
+- `apps/api`: FastAPI Lambda service for jobs, batches, presigned URLs, ownership checks and Step Functions starts.
 - `apps/worker`: Dockerized Python worker using local conversion engines.
-- `infra/blueprints`: reusable Terraform modules and remote-state bootstrap. The conversion state machine lives in the API module, not in a hidden shared stack.
+- `infra/blueprints`: reusable Terraform modules and remote-state bootstrap. The conversion state machine lives in the API module and publishes work to the shared conversion queue.
 - `infra/terraform`: Terragrunt live stacks.
 - `.github/workflows`: CI/CD for infra, frontend and backend. API and worker deploy from one ordered backend workflow.
 - `docs/prd-coverage.md`: PRD requirement coverage checklist.
@@ -118,4 +118,4 @@ Python dependency management is handled with `uv`. Do not use manual `python -m 
 2. Run `.github/workflows/infra-lifecycle.yml` with `plan` or `apply`. The workflow bootstraps the Terraform S3 state bucket and DynamoDB lock table if they do not exist. Destroy flows stop running conversions and empty project buckets/ECR images before Terragrunt destroys stacks.
 3. Deploy backend through `.github/workflows/backend-deploy.yml`, selecting `api`, `worker` or `both` for manual runs. On push, the workflow detects API and worker path changes and deploys only the affected backend components. The API Lambda is packaged with `apps/api/scripts/build_lambda.sh`; the worker remains a Docker/ECR image because it runs on ECS Fargate.
 
-The Terraform modules use private S3 buckets, short-lived presigned URLs, DynamoDB TTL, CloudWatch logs, Step Functions retries/catches, ECS Fargate isolation, and separated state boundaries.
+The Terraform modules use private S3 buckets, short-lived presigned URLs, DynamoDB TTL, CloudWatch logs, Step Functions callbacks, SQS redrive policies, ECS Fargate isolation, and separated state boundaries.

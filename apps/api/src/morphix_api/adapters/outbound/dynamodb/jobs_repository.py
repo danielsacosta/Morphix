@@ -23,14 +23,17 @@ class DynamoDBJobsRepository(JobsRepository):
         item = response.get("Item")
         return Job.from_item(item) if item else None
 
-    def list_jobs(self, user_id: str, limit: int = 50) -> list[Job]:
+    def list_jobs(self, user_id: str, limit: int = 50, batch_id: str | None = None) -> list[Job]:
         response = self._table.query(
             IndexName="GSI1",
             KeyConditionExpression=Key("user_id").eq(user_id),
             ScanIndexForward=False,
             Limit=limit,
         )
-        return [Job.from_item(item) for item in response.get("Items", [])]
+        jobs = [Job.from_item(item) for item in response.get("Items", [])]
+        if batch_id:
+            jobs = [job for job in jobs if job.batch_id == batch_id]
+        return jobs
 
     def update_job(self, job_id: str, **updates: object) -> Job:
         updates = {key: value for key, value in updates.items() if value is not None}
@@ -55,4 +58,3 @@ class DynamoDBJobsRepository(JobsRepository):
             ReturnValues="ALL_NEW",
         )
         return Job.from_item(response["Attributes"])
-

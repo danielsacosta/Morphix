@@ -40,6 +40,16 @@ variable "state_machine_name" {
   description = "State machine name."
 }
 
+variable "conversion_queue_name" {
+  type        = string
+  description = "SQS conversion queue name."
+}
+
+variable "conversion_dlq_name" {
+  type        = string
+  description = "SQS conversion dead-letter queue name."
+}
+
 variable "jobs_table_name" {
   type        = string
   description = "Jobs table name."
@@ -49,6 +59,12 @@ variable "failed_jobs_alarm_threshold" {
   type        = number
   description = "Failed worker log events threshold."
   default     = 5
+}
+
+variable "oldest_message_age_alarm_seconds" {
+  type        = number
+  description = "Oldest queued conversion age that triggers an alarm."
+  default     = 900
 }
 
 variable "tags" {

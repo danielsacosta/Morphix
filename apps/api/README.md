@@ -1,11 +1,12 @@
 # Morphix API
 
-FastAPI service responsible for conversion job lifecycle, presigned S3 URLs, Step Functions orchestration, and user ownership checks.
+FastAPI service responsible for conversion job lifecycle, batch creation, presigned S3 URLs, Step Functions orchestration, and user ownership checks.
 
 ## Endpoints
 
 - `GET /health`
 - `POST /jobs`
+- `POST /jobs/batch`
 - `GET /jobs`
 - `GET /jobs/{job_id}`
 - `POST /jobs/{job_id}/upload-url`
@@ -14,4 +15,3 @@ FastAPI service responsible for conversion job lifecycle, presigned S3 URLs, Ste
 - `DELETE /jobs/{job_id}`
 
 Every job endpoint requires `X-User-Id`. This MVP keeps identity simple while enforcing ownership boundaries in the API.
-

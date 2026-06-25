@@ -17,4 +17,3 @@ class FakeConversionOrchestrator:
     def start_conversion(self, job: Job) -> str:
         self.started_jobs.append(job.job_id)
         return f"arn:aws:states:us-east-1:000000000000:execution:morphix:{job.job_id}"
-

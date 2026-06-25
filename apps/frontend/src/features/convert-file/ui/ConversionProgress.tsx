@@ -3,15 +3,18 @@ import { Progress } from '../../../shared/ui/progress';
 import type { FlowState } from '../model/convertFileTypes';
 
 interface ConversionProgressProps {
-  currentJob: JobRecord | null;
+  currentJobs: JobRecord[];
   flowState: FlowState;
+  fileCount: number;
 }
 
-export function ConversionProgress({ currentJob, flowState }: ConversionProgressProps) {
+export function ConversionProgress({ currentJobs, flowState, fileCount }: ConversionProgressProps) {
+  const hasJobs = currentJobs.length > 0;
+  const finishedCount = currentJobs.filter((job) => ['COMPLETED', 'FAILED', 'EXPIRED', 'DELETED'].includes(job.status)).length;
   const progressSteps = [
-    { key: 'creating', label: 'Archivo', active: Boolean(currentJob), done: Boolean(currentJob) },
+    { key: 'creating', label: fileCount > 1 ? 'Archivos' : 'Archivo', active: flowState === 'creating', done: hasJobs },
     { key: 'uploading', label: 'Carga', active: flowState === 'uploading', done: ['starting', 'polling', 'ready'].includes(flowState) },
-    { key: 'polling', label: 'Conversión', active: flowState === 'polling', done: flowState === 'ready' },
+    { key: 'polling', label: 'Cola', active: ['starting', 'polling'].includes(flowState), done: hasJobs && finishedCount === currentJobs.length },
     { key: 'ready', label: 'Resultado', active: flowState === 'ready', done: flowState === 'ready' },
   ];
 

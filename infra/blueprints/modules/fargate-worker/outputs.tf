@@ -22,7 +22,10 @@ output "worker_security_group_id" {
   value = aws_security_group.worker.id
 }
 
+output "worker_service_name" {
+  value = aws_ecs_service.worker.name
+}
+
 output "worker_private_subnet_ids" {
   value = var.private_subnet_ids
 }
-

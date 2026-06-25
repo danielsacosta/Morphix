@@ -54,8 +54,10 @@ def settings(tmp_path: Path) -> Settings:
         jobs_table_name="jobs",
         input_bucket="input",
         output_bucket="output",
+        conversion_queue_url="",
         workdir=str(tmp_path),
         conversion_timeout_seconds=30,
+        queue_wait_time_seconds=1,
     )
 
 

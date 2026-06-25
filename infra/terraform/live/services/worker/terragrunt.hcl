@@ -43,6 +43,14 @@ dependency "ecs" {
   }
 }
 
+dependency "conversion_queue" {
+  config_path = "../../shared/conversion-queue"
+  mock_outputs = {
+    queue_url = "https://sqs.us-east-1.amazonaws.com/000000000000/morphix-dev-conversions"
+    queue_arn = "arn:aws:sqs:us-east-1:000000000000:morphix-dev-conversions"
+  }
+}
+
 inputs = {
   project_name                 = local.root.locals.project_name
   environment                  = local.root.locals.environment
@@ -61,6 +69,9 @@ inputs = {
   output_bucket_name           = dependency.storage.outputs.output_bucket_name
   jobs_table_arn               = dependency.jobs_db.outputs.jobs_table_arn
   jobs_table_name              = dependency.jobs_db.outputs.jobs_table_name
+  conversion_queue_url         = dependency.conversion_queue.outputs.queue_url
+  conversion_queue_arn         = dependency.conversion_queue.outputs.queue_arn
+  worker_desired_count         = 1
   conversion_timeout_seconds   = 900
   tags                         = local.root.locals.tags
 }

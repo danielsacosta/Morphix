@@ -45,4 +45,3 @@ def run_from_env() -> int:
     result = pipeline.run(job)
     print(result.to_json())
     return 0 if result.status == "COMPLETED" else 1
-

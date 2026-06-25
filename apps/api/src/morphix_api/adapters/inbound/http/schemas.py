@@ -14,6 +14,10 @@ class CreateJobRequest(BaseModel):
     content_type: str = "application/octet-stream"
 
 
+class CreateBatchJobsRequest(BaseModel):
+    files: list[CreateJobRequest] = Field(min_length=1, max_length=10)
+
+
 class UploadUrlRequest(BaseModel):
     content_type: str = "application/octet-stream"
 
@@ -36,6 +40,10 @@ class JobSchema(BaseModel):
     duration_seconds: float | None = None
     worker_task_arn: str | None = None
     state_machine_execution_arn: str | None = None
+    batch_id: str | None = None
+    queue_position: int | None = None
+    queued_at: str | None = None
+    queue_message_id: str | None = None
 
     @classmethod
     def from_domain(cls, job: Job) -> "JobSchema":
@@ -47,6 +55,11 @@ class JobResponse(BaseModel):
 
 
 class JobsResponse(BaseModel):
+    jobs: list[JobSchema]
+
+
+class BatchJobsResponse(BaseModel):
+    batch_id: str
     jobs: list[JobSchema]
 
 
@@ -65,4 +78,3 @@ class DownloadUrlResponse(BaseModel):
 class HealthResponse(BaseModel):
     service: str = "morphix-api"
     status: str = "ok"
-

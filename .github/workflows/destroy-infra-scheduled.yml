@@ -70,6 +70,7 @@ jobs:
             "infra/terraform/live/shared/observability"
             "infra/terraform/live/services/api"
             "infra/terraform/live/services/worker"
+            "infra/terraform/live/shared/conversion-queue"
             "infra/terraform/live/shared/ecs"
             "infra/terraform/live/shared/jobs-db"
             "infra/terraform/live/shared/storage"

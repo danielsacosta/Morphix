@@ -12,8 +12,10 @@ class Settings:
     jobs_table_name: str
     input_bucket: str
     output_bucket: str
+    conversion_queue_url: str
     workdir: str
     conversion_timeout_seconds: int
+    queue_wait_time_seconds: int
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -24,7 +26,8 @@ class Settings:
             jobs_table_name=os.getenv("JOBS_TABLE_NAME", "morphix-dev-jobs"),
             input_bucket=os.getenv("INPUT_BUCKET", "morphix-dev-input"),
             output_bucket=os.getenv("OUTPUT_BUCKET", "morphix-dev-output"),
+            conversion_queue_url=os.getenv("CONVERSION_QUEUE_URL", ""),
             workdir=os.getenv("WORKDIR", "/tmp/morphix"),
             conversion_timeout_seconds=int(os.getenv("CONVERSION_TIMEOUT_SECONDS", "900")),
+            queue_wait_time_seconds=int(os.getenv("QUEUE_WAIT_TIME_SECONDS", "20")),
         )
-

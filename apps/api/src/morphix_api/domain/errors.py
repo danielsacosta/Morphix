@@ -28,3 +28,6 @@ class JobOwnershipError(DomainError):
 class JobStateError(DomainError):
     status_code = 409
 
+
+class BatchSizeError(DomainError):
+    status_code = 400

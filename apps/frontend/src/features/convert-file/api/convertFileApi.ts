@@ -1,5 +1,5 @@
 import { normalizeExtension } from '../../../entities/conversion';
-import type { CreateJobResponse, JobRecord, UploadUrlResponse } from '../../../entities/job';
+import type { CreateBatchJobsResponse, CreateJobResponse, JobRecord, UploadUrlResponse } from '../../../entities/job';
 import { httpRequest } from '../../../shared/api/httpClient';
 
 export async function createJob(file: File, targetFormat: string): Promise<CreateJobResponse> {
@@ -11,6 +11,21 @@ export async function createJob(file: File, targetFormat: string): Promise<Creat
       content_type: file.type || 'application/octet-stream',
       source_format: normalizeExtension(file.name),
       target_format: targetFormat,
+    }),
+  });
+}
+
+export async function createBatchJobs(files: File[], targetFormat: string): Promise<CreateBatchJobsResponse> {
+  return httpRequest<CreateBatchJobsResponse>('/jobs/batch', {
+    method: 'POST',
+    body: JSON.stringify({
+      files: files.map((file) => ({
+        filename: file.name,
+        file_size: file.size,
+        content_type: file.type || 'application/octet-stream',
+        source_format: normalizeExtension(file.name),
+        target_format: targetFormat,
+      })),
     }),
   });
 }

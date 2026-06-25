@@ -43,4 +43,3 @@ class Settings:
     @property
     def max_file_size_bytes(self) -> int:
         return self.max_file_size_mb * 1024 * 1024
-

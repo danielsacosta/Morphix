@@ -7,6 +7,7 @@ class JobStatus(StrEnum):
     pending = "PENDING"
     upload_requested = "UPLOAD_REQUESTED"
     uploaded = "UPLOADED"
+    queued = "QUEUED"
     processing = "PROCESSING"
     completed = "COMPLETED"
     failed = "FAILED"
@@ -19,6 +20,6 @@ class JobStatus(StrEnum):
             JobStatus.pending,
             JobStatus.upload_requested,
             JobStatus.uploaded,
+            JobStatus.queued,
             JobStatus.processing,
         }
-

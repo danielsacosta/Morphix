@@ -96,6 +96,26 @@ data "aws_iam_policy_document" "task" {
     actions   = ["dynamodb:GetItem", "dynamodb:UpdateItem"]
     resources = [var.jobs_table_arn]
   }
+
+  statement {
+    sid = "ConsumeConversionQueue"
+    actions = [
+      "sqs:ReceiveMessage",
+      "sqs:DeleteMessage",
+      "sqs:ChangeMessageVisibility",
+      "sqs:GetQueueAttributes"
+    ]
+    resources = [var.conversion_queue_arn]
+  }
+
+  statement {
+    sid = "ReportStepFunctionsTaskResult"
+    actions = [
+      "states:SendTaskFailure",
+      "states:SendTaskSuccess"
+    ]
+    resources = ["*"]
+  }
 }
 
 resource "aws_iam_role_policy" "task" {
@@ -151,6 +171,8 @@ resource "aws_ecs_task_definition" "worker" {
         { name = "JOBS_TABLE_NAME", value = var.jobs_table_name },
         { name = "INPUT_BUCKET", value = var.input_bucket_name },
         { name = "OUTPUT_BUCKET", value = var.output_bucket_name },
+        { name = "CONVERSION_QUEUE_URL", value = var.conversion_queue_url },
+        { name = "QUEUE_WAIT_TIME_SECONDS", value = "20" },
         { name = "WORKDIR", value = "/tmp/morphix" },
         { name = "CONVERSION_TIMEOUT_SECONDS", value = tostring(var.conversion_timeout_seconds) }
       ]
@@ -164,6 +186,25 @@ resource "aws_ecs_task_definition" "worker" {
       }
     }
   ])
+
+  tags = var.tags
+}
+
+resource "aws_ecs_service" "worker" {
+  name            = "${local.name}-worker"
+  cluster         = var.cluster_arn
+  task_definition = aws_ecs_task_definition.worker.arn
+  desired_count   = var.worker_desired_count
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    assign_public_ip = false
+    security_groups  = [aws_security_group.worker.id]
+    subnets          = var.private_subnet_ids
+  }
+
+  deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
 
   tags = var.tags
 }

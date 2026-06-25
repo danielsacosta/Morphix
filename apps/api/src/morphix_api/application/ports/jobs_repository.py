@@ -13,7 +13,7 @@ class JobsRepository(Protocol):
     def get_job(self, job_id: str) -> Job | None:
         ...
 
-    def list_jobs(self, user_id: str, limit: int = 50) -> list[Job]:
+    def list_jobs(self, user_id: str, limit: int = 50, batch_id: str | None = None) -> list[Job]:
         ...
 
     def update_job(self, job_id: str, **updates: object) -> Job:
@@ -31,8 +31,10 @@ class InMemoryJobsRepository:
     def get_job(self, job_id: str) -> Job | None:
         return self.jobs.get(job_id)
 
-    def list_jobs(self, user_id: str, limit: int = 50) -> list[Job]:
+    def list_jobs(self, user_id: str, limit: int = 50, batch_id: str | None = None) -> list[Job]:
         filtered = [job for job in self.jobs.values() if job.user_id == user_id and job.status != JobStatus.deleted]
+        if batch_id:
+            filtered = [job for job in filtered if job.batch_id == batch_id]
         return sorted(filtered, key=lambda job: job.created_at, reverse=True)[:limit]
 
     def update_job(self, job_id: str, **updates: object) -> Job:
@@ -46,4 +48,3 @@ class InMemoryJobsRepository:
         updated = replace(current, **normalized_updates)
         self.jobs[job_id] = updated
         return updated
-

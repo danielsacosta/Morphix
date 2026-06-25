@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from .....application.ports.conversion_orchestrator import ConversionOrchestrator
 from .....application.ports.jobs_repository import JobsRepository
 from .....application.ports.object_url_service import ObjectUrlService
+from .....application.use_cases.create_batch_jobs import CreateBatchJobsCommand, CreateBatchJobsUseCase
 from .....application.use_cases.create_job import CreateJobCommand, CreateJobUseCase
 from .....application.use_cases.delete_job import DeleteJobUseCase
 from .....application.use_cases.get_job import GetJobUseCase
@@ -25,6 +26,8 @@ from ..dependencies import (
     require_user_id,
 )
 from ..schemas import (
+    BatchJobsResponse,
+    CreateBatchJobsRequest,
     CreateJobRequest,
     DownloadUrlResponse,
     JobResponse,
@@ -65,12 +68,47 @@ def create_job(
     return JobResponse(job=JobSchema.from_domain(job))
 
 
+@router.post("/batch", response_model=BatchJobsResponse, status_code=status.HTTP_201_CREATED)
+def create_batch_jobs(
+    payload: CreateBatchJobsRequest,
+    user_id: Annotated[str, Depends(require_user_id)],
+    repository: Annotated[JobsRepository, Depends(get_repository)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> BatchJobsResponse:
+    use_case = CreateBatchJobsUseCase(
+        repository=repository,
+        input_bucket=settings.input_bucket,
+        output_bucket=settings.output_bucket,
+        job_ttl_days=settings.job_ttl_days,
+        file_size_policy=FileSizePolicy(settings.max_file_size_bytes, settings.max_file_size_mb),
+        conversion_policy=ConversionPolicy.default(),
+    )
+    jobs = use_case.execute(
+        CreateBatchJobsCommand(
+            user_id=user_id,
+            files=[
+                CreateJobCommand(
+                    user_id=user_id,
+                    filename=item.filename,
+                    file_size=item.file_size,
+                    content_type=item.content_type,
+                    source_format=item.source_format,
+                    target_format=item.target_format,
+                )
+                for item in payload.files
+            ],
+        )
+    )
+    return BatchJobsResponse(batch_id=jobs[0].batch_id or "", jobs=[JobSchema.from_domain(job) for job in jobs])
+
+
 @router.get("", response_model=JobsResponse)
 def list_jobs(
     user_id: Annotated[str, Depends(require_user_id)],
     repository: Annotated[JobsRepository, Depends(get_repository)],
+    batch_id: Annotated[str | None, Query()] = None,
 ) -> JobsResponse:
-    jobs = ListJobsUseCase(repository).execute(user_id)
+    jobs = ListJobsUseCase(repository).execute(user_id, batch_id=batch_id)
     return JobsResponse(jobs=[JobSchema.from_domain(job) for job in jobs])
 
 
@@ -128,4 +166,3 @@ def delete_job(
 ) -> JobResponse:
     job = DeleteJobUseCase(repository).execute(job_id, user_id)
     return JobResponse(job=JobSchema.from_domain(job))
-

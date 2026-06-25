@@ -45,6 +45,42 @@ resource "aws_cloudwatch_metric_alarm" "step_functions_failed" {
   tags = var.tags
 }
 
+resource "aws_cloudwatch_metric_alarm" "conversion_dlq_messages" {
+  alarm_name          = "${local.name}-conversion-dlq-messages"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 1
+  metric_name         = "ApproximateNumberOfMessagesVisible"
+  namespace           = "AWS/SQS"
+  period              = 300
+  statistic           = "Sum"
+  threshold           = 1
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    QueueName = var.conversion_dlq_name
+  }
+
+  tags = var.tags
+}
+
+resource "aws_cloudwatch_metric_alarm" "conversion_queue_age" {
+  alarm_name          = "${local.name}-conversion-queue-age"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 2
+  metric_name         = "ApproximateAgeOfOldestMessage"
+  namespace           = "AWS/SQS"
+  period              = 300
+  statistic           = "Maximum"
+  threshold           = var.oldest_message_age_alarm_seconds
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    QueueName = var.conversion_queue_name
+  }
+
+  tags = var.tags
+}
+
 resource "aws_cloudwatch_dashboard" "main" {
   dashboard_name = "${local.name}-operations"
 
@@ -71,6 +107,25 @@ resource "aws_cloudwatch_dashboard" "main" {
         width  = 12
         height = 6
         properties = {
+          title  = "Conversion queue"
+          region = var.aws_region
+          metrics = [
+            ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", var.conversion_queue_name],
+            [".", "ApproximateNumberOfMessagesNotVisible", ".", "."],
+            [".", "ApproximateAgeOfOldestMessage", ".", ".", { stat = "Maximum", yAxis = "right" }],
+            ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", var.conversion_dlq_name]
+          ]
+          stat   = "Sum"
+          period = 300
+        }
+      },
+      {
+        type   = "metric"
+        x      = 0
+        y      = 6
+        width  = 12
+        height = 6
+        properties = {
           title   = "DynamoDB jobs table"
           region  = var.aws_region
           metrics = [["AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", var.jobs_table_name], [".", "ConsumedWriteCapacityUnits", ".", "."]]
@@ -81,7 +136,7 @@ resource "aws_cloudwatch_dashboard" "main" {
       {
         type   = "log"
         x      = 0
-        y      = 6
+        y      = 12
         width  = 24
         height = 6
         properties = {

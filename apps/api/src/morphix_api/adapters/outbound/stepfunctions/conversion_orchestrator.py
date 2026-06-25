@@ -26,4 +26,3 @@ class StepFunctionsConversionOrchestrator(ConversionOrchestrator):
             input=json.dumps(job.to_item()),
         )
         return str(response["executionArn"])
-

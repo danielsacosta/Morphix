@@ -6,8 +6,9 @@ export async function getJob(jobId: string): Promise<JobRecord> {
   return response.job;
 }
 
-export async function listJobs(): Promise<JobRecord[]> {
-  const response = await httpRequest<{ jobs: JobRecord[] }>('/jobs');
+export async function listJobs(batchId?: string): Promise<JobRecord[]> {
+  const query = batchId ? `?batch_id=${encodeURIComponent(batchId)}` : '';
+  const response = await httpRequest<{ jobs: JobRecord[] }>(`/jobs${query}`);
   return response.jobs;
 }
 
@@ -18,4 +19,3 @@ export async function getDownloadUrl(jobId: string): Promise<DownloadUrlResponse
 export async function deleteJob(jobId: string): Promise<void> {
   await httpRequest<{ job: JobRecord }>(`/jobs/${jobId}`, { method: 'DELETE' });
 }
-

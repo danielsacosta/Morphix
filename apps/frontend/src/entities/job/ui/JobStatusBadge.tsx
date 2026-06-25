@@ -13,6 +13,7 @@ const statusClassName: Record<JobStatus, string> = {
   PENDING: 'border-muted-foreground/25 bg-muted/40 text-muted-foreground',
   UPLOAD_REQUESTED: 'border-primary/35 bg-primary/10 text-primary',
   UPLOADED: 'border-primary/35 bg-primary/10 text-primary',
+  QUEUED: 'border-accent/35 bg-accent/10 text-accent',
   PROCESSING: 'border-accent/40 bg-accent/10 text-accent',
   COMPLETED: 'border-primary/45 bg-primary/15 text-primary',
   FAILED: 'border-destructive/45 bg-destructive/15 text-destructive',

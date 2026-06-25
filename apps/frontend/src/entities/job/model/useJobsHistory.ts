@@ -5,8 +5,7 @@ import { jobQueries } from './jobQueries';
 export function useJobsHistory() {
   return useQuery({
     queryKey: jobQueries.list(),
-    queryFn: listJobs,
+    queryFn: () => listJobs(),
     staleTime: 10_000,
   });
 }
-

@@ -8,8 +8,10 @@ on:
       - apps/worker/**
       - infra/blueprints/modules/api/**
       - infra/blueprints/modules/fargate-worker/**
+      - infra/blueprints/modules/conversion-queue/**
       - infra/terraform/live/services/api/**
       - infra/terraform/live/services/worker/**
+      - infra/terraform/live/shared/conversion-queue/**
       - .github/workflows/backend-deploy.yml
   workflow_dispatch:
     inputs:
@@ -85,6 +87,10 @@ jobs:
                 apps/worker/*|infra/blueprints/modules/fargate-worker/*|infra/terraform/live/services/worker/*)
                   deploy_worker=true
                   ;;
+                infra/blueprints/modules/conversion-queue/*|infra/terraform/live/shared/conversion-queue/*)
+                  deploy_api=true
+                  deploy_worker=true
+                  ;;
                 .github/workflows/backend-deploy.yml)
                   deploy_api=true
                   deploy_worker=true
@@ -140,6 +146,7 @@ jobs:
             "infra/terraform/live/shared/storage"
             "infra/terraform/live/shared/jobs-db"
             "infra/terraform/live/shared/ecs"
+            "infra/terraform/live/shared/conversion-queue"
             "infra/terraform/live/services/worker"
           )
 
@@ -156,6 +163,11 @@ jobs:
       - name: Apply browser upload CORS
         if: needs.scope.outputs.deploy_api == 'true' || needs.scope.outputs.deploy_worker == 'true'
         working-directory: infra/terraform/live/shared/storage
+        run: terragrunt apply -input=false -no-color -auto-approve
+
+      - name: Apply conversion queue
+        if: needs.scope.outputs.deploy_api == 'true' || needs.scope.outputs.deploy_worker == 'true'
+        working-directory: infra/terraform/live/shared/conversion-queue
         run: terragrunt apply -input=false -no-color -auto-approve
 
       - name: Test worker

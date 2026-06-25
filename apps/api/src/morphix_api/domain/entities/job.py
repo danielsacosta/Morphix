@@ -25,6 +25,10 @@ class Job:
     duration_seconds: float | None = None
     worker_task_arn: str | None = None
     state_machine_execution_arn: str | None = None
+    batch_id: str | None = None
+    queue_position: int | None = None
+    queued_at: str | None = None
+    queue_message_id: str | None = None
 
     def to_item(self) -> dict[str, Any]:
         item = asdict(self)
@@ -51,5 +55,8 @@ class Job:
             duration_seconds=float(item["duration_seconds"]) if item.get("duration_seconds") is not None else None,
             worker_task_arn=item.get("worker_task_arn"),
             state_machine_execution_arn=item.get("state_machine_execution_arn"),
+            batch_id=item.get("batch_id"),
+            queue_position=int(item["queue_position"]) if item.get("queue_position") is not None else None,
+            queued_at=item.get("queued_at"),
+            queue_message_id=item.get("queue_message_id"),
         )
-

@@ -40,7 +40,7 @@ class CreateJobUseCase:
         self.file_size_policy = file_size_policy
         self.conversion_policy = conversion_policy
 
-    def execute(self, command: CreateJobCommand) -> Job:
+    def execute(self, command: CreateJobCommand, batch_id: str | None = None, queue_position: int | None = None) -> Job:
         self.file_size_policy.assert_allowed(command.file_size)
         source_format = normalize_format(command.source_format) or extension_from_filename(command.filename)
         target_format = normalize_format(command.target_format)
@@ -66,6 +66,7 @@ class CreateJobUseCase:
             updated_at=now_iso,
             expires_at=ttl_timestamp(now, self.job_ttl_days),
             file_size=command.file_size,
+            batch_id=batch_id,
+            queue_position=queue_position,
         )
         return self.repository.put_job(job)
-

@@ -79,6 +79,22 @@ variable "jobs_table_name" {
   description = "Jobs table name."
 }
 
+variable "conversion_queue_url" {
+  type        = string
+  description = "SQS conversion queue URL."
+}
+
+variable "conversion_queue_arn" {
+  type        = string
+  description = "SQS conversion queue ARN."
+}
+
+variable "worker_desired_count" {
+  type        = number
+  description = "Worker ECS service desired task count. Keep at 1 for mono-threaded processing."
+  default     = 1
+}
+
 variable "input_bucket_name" {
   type        = string
   description = "Input bucket name."

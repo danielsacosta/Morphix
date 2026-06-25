@@ -54,7 +54,7 @@ def create_docx_job(client: TestClient) -> str:
 
 
 def test_create_upload_start_and_download_job() -> None:
-    client, repository, gateway = make_client()
+    client, repository, orchestrator = make_client()
     job_id = create_docx_job(client)
 
     upload = client.post(
@@ -68,8 +68,9 @@ def test_create_upload_start_and_download_job() -> None:
 
     started = client.post(f"/jobs/{job_id}/start", headers={"X-User-Id": "user-1"})
     assert started.status_code == 200
-    assert started.json()["job"]["status"] == "PROCESSING"
-    assert gateway.started_jobs == [job_id]
+    assert started.json()["job"]["status"] == "QUEUED"
+    assert started.json()["job"]["state_machine_execution_arn"]
+    assert orchestrator.started_jobs == [job_id]
 
     repository.update_job(job_id, status=JobStatus.completed)
     download = client.get(f"/jobs/{job_id}/download-url", headers={"X-User-Id": "user-1"})
@@ -118,3 +119,29 @@ def test_lists_only_current_user_jobs() -> None:
     assert response.status_code == 200
     assert len(response.json()["jobs"]) == 1
     assert response.json()["jobs"][0]["user_id"] == "user-1"
+
+
+def test_creates_batch_jobs_with_positions() -> None:
+    client, _, _ = make_client()
+    response = client.post(
+        "/jobs/batch",
+        headers={"X-User-Id": "user-1"},
+        json={
+            "files": [
+                {"filename": "a.pdf", "file_size": 100, "target_format": "docx"},
+                {"filename": "b.pdf", "file_size": 200, "target_format": "docx"},
+            ]
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["batch_id"]
+    assert [job["queue_position"] for job in payload["jobs"]] == [1, 2]
+    assert {job["batch_id"] for job in payload["jobs"]} == {payload["batch_id"]}
+
+    create_docx_job(client)
+    filtered = client.get(f"/jobs?batch_id={payload['batch_id']}", headers={"X-User-Id": "user-1"})
+
+    assert filtered.status_code == 200
+    assert {job["job_id"] for job in filtered.json()["jobs"]} == {job["job_id"] for job in payload["jobs"]}

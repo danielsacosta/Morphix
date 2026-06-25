@@ -2,6 +2,7 @@ export type JobStatus =
   | 'PENDING'
   | 'UPLOAD_REQUESTED'
   | 'UPLOADED'
+  | 'QUEUED'
   | 'PROCESSING'
   | 'COMPLETED'
   | 'FAILED'
@@ -23,10 +24,19 @@ export interface JobRecord {
   file_size: number;
   duration_seconds?: number | null;
   state_machine_execution_arn?: string | null;
+  batch_id?: string | null;
+  queue_position?: number | null;
+  queued_at?: string | null;
+  queue_message_id?: string | null;
 }
 
 export interface CreateJobResponse {
   job: JobRecord;
+}
+
+export interface CreateBatchJobsResponse {
+  batch_id: string;
+  jobs: JobRecord[];
 }
 
 export interface UploadUrlResponse {
@@ -40,4 +50,3 @@ export interface DownloadUrlResponse {
   download_url: string;
   expires_in: number;
 }
-

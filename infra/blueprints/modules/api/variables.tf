@@ -55,34 +55,20 @@ variable "output_bucket_arn" {
   description = "Output bucket ARN."
 }
 
-variable "cluster_arn" {
+variable "conversion_queue_url" {
   type        = string
-  description = "ECS cluster ARN used by the conversion state machine."
+  description = "SQS conversion queue URL."
 }
 
-variable "task_definition_arn" {
+variable "conversion_queue_arn" {
   type        = string
-  description = "Worker task definition ARN used by the conversion state machine."
+  description = "SQS conversion queue ARN."
 }
 
-variable "task_execution_role_arn" {
-  type        = string
-  description = "Worker execution role ARN passed by Step Functions."
-}
-
-variable "task_role_arn" {
-  type        = string
-  description = "Worker task role ARN passed by Step Functions."
-}
-
-variable "worker_security_group_id" {
-  type        = string
-  description = "Worker security group used by the conversion state machine."
-}
-
-variable "private_subnet_ids" {
-  type        = list(string)
-  description = "Private subnet IDs used by the conversion state machine."
+variable "worker_callback_timeout_seconds" {
+  type        = number
+  description = "Maximum time Step Functions waits for a worker callback."
+  default     = 1200
 }
 
 variable "max_file_size_mb" {

@@ -149,6 +149,24 @@ stop_worker_tasks() {
   aws ecs wait tasks-stopped --cluster "${cluster_name}" --tasks ${task_arns} || true
 }
 
+purge_queue() {
+  local queue_name="$1"
+  local queue_url
+
+  queue_url="$(aws sqs get-queue-url \
+    --queue-name "${queue_name}" \
+    --query "QueueUrl" \
+    --output text 2>/dev/null || true)"
+
+  if [[ -z "${queue_url}" || "${queue_url}" == "None" ]]; then
+    echo "SQS queue ${queue_name} does not exist. Skipping."
+    return
+  fi
+
+  echo "Purging SQS queue ${queue_name}"
+  aws sqs purge-queue --queue-url "${queue_url}" >/dev/null 2>&1 || true
+}
+
 empty_worker_repository() {
   local repository_name="${NAME_PREFIX}-worker"
   local images_file
@@ -201,6 +219,8 @@ PY
 
 stop_state_machine_executions
 stop_worker_tasks
+purge_queue "${NAME_PREFIX}-conversions"
+purge_queue "${NAME_PREFIX}-conversions-dlq"
 empty_bucket "${FRONTEND_BUCKET_NAME:-${NAME_PREFIX}-frontend}"
 empty_bucket "${INPUT_BUCKET_NAME:-${NAME_PREFIX}-input}"
 empty_bucket "${OUTPUT_BUCKET_NAME:-${NAME_PREFIX}-output}"

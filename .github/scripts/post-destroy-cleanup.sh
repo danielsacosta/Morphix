@@ -90,6 +90,24 @@ delete_log_group() {
   fi
 }
 
+delete_queue() {
+  local queue_name="$1"
+  local queue_url
+
+  queue_url="$(aws sqs get-queue-url \
+    --queue-name "${queue_name}" \
+    --query "QueueUrl" \
+    --output text 2>/dev/null || true)"
+
+  if [[ -z "${queue_url}" || "${queue_url}" == "None" ]]; then
+    echo "SQS queue ${queue_name} does not exist. Skipping."
+    return
+  fi
+
+  echo "Deleting SQS queue ${queue_name}"
+  aws sqs delete-queue --queue-url "${queue_url}" >/dev/null || true
+}
+
 delete_ecs_task_definitions() {
   local family_name="${NAME_PREFIX}-worker"
   local active_task_definitions
@@ -185,6 +203,8 @@ delete_lock_table() {
 delete_log_group "/aws/ecs/containerinsights/${NAME_PREFIX}-cluster/performance"
 delete_log_group "/aws/ecs/${NAME_PREFIX}-worker"
 delete_log_group "/aws/lambda/${NAME_PREFIX}-api"
+delete_queue "${NAME_PREFIX}-conversions"
+delete_queue "${NAME_PREFIX}-conversions-dlq"
 delete_ecs_task_definitions
 delete_ecs_cluster
 delete_lock_table "${LOCK_TABLE}"

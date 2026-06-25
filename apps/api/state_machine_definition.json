@@ -1,8 +1,8 @@
 {
-  "Comment": "Morphix asynchronous conversion workflow",
-  "StartAt": "MarkProcessing",
+  "Comment": "Morphix asynchronous conversion workflow with SQS buffering",
+  "StartAt": "MarkQueued",
   "States": {
-    "MarkProcessing": {
+    "MarkQueued": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:updateItem",
       "Parameters": {
@@ -12,56 +12,52 @@
             "S.$": "$.job_id"
           }
         },
-        "UpdateExpression": "SET #status = :status, #updated_at = :updated_at",
+        "UpdateExpression": "SET #status = :status, #updated_at = :updated_at, #queued_at = :queued_at",
         "ExpressionAttributeNames": {
           "#status": "status",
-          "#updated_at": "updated_at"
+          "#updated_at": "updated_at",
+          "#queued_at": "queued_at"
         },
         "ExpressionAttributeValues": {
           ":status": {
-            "S": "PROCESSING"
+            "S": "QUEUED"
           },
           ":updated_at": {
+            "S.$": "$$.State.EnteredTime"
+          },
+          ":queued_at": {
             "S.$": "$$.State.EnteredTime"
           }
         }
       },
       "ResultPath": null,
-      "Next": "RunWorker"
+      "Next": "QueueWorker"
     },
-    "RunWorker": {
+    "QueueWorker": {
       "Type": "Task",
-      "Resource": "arn:aws:states:::ecs:runTask.sync",
+      "Resource": "arn:aws:states:::sqs:sendMessage.waitForTaskToken",
       "Parameters": {
-        "LaunchType": "FARGATE",
-        "Cluster": "__CLUSTER_ARN__",
-        "TaskDefinition": "__TASK_DEFINITION_ARN__",
-        "PlatformVersion": "LATEST",
-        "NetworkConfiguration": {
-          "AwsvpcConfiguration": {
-            "AssignPublicIp": "DISABLED",
-            "SecurityGroups": "__WORKER_SECURITY_GROUP_IDS__",
-            "Subnets": "__PRIVATE_SUBNET_IDS__"
-          }
+        "QueueUrl": "__CONVERSION_QUEUE_URL__",
+        "MessageBody": {
+          "task_token.$": "$$.Task.Token",
+          "payload.$": "$"
         },
-        "Overrides": {
-          "ContainerOverrides": [
-            {
-              "Name": "worker",
-              "Environment": [
-                {
-                  "Name": "JOB_PAYLOAD",
-                  "Value.$": "States.JsonToString($)"
-                }
-              ]
-            }
-          ]
+        "MessageAttributes": {
+          "job_id": {
+            "DataType": "String",
+            "StringValue.$": "$.job_id"
+          },
+          "user_id": {
+            "DataType": "String",
+            "StringValue.$": "$.user_id"
+          }
         }
       },
+      "TimeoutSeconds": "__WORKER_CALLBACK_TIMEOUT_SECONDS__",
       "Retry": [
         {
           "ErrorEquals": [
-            "ECS.AmazonECSException"
+            "SQS.AmazonSQSException"
           ],
           "IntervalSeconds": 5,
           "MaxAttempts": 2,
