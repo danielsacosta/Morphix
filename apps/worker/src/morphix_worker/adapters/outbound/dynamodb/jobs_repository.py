@@ -46,8 +46,19 @@ class DynamoDBJobRepository(JobsRepository):
             ExpressionAttributeValues=values,
         )
 
+    def update_progress(self, job_id: str, progress_percent: int, progress_stage: str) -> None:
+        self._update(job_id, {"progress_percent": progress_percent, "progress_stage": progress_stage})
+
     def mark_processing(self, job_id: str) -> None:
-        self._update(job_id, {"status": JobStatus.processing, "error_message": None})
+        self._update(
+            job_id,
+            {
+                "status": JobStatus.processing,
+                "error_message": None,
+                "progress_percent": 20,
+                "progress_stage": "Preparando",
+            },
+        )
 
     def mark_completed(self, job_id: str, output_key: str, duration_seconds: float) -> None:
         self._update(
@@ -57,11 +68,18 @@ class DynamoDBJobRepository(JobsRepository):
                 "output_key": output_key,
                 "duration_seconds": round(duration_seconds, 3),
                 "error_message": None,
+                "progress_percent": 100,
+                "progress_stage": "Completado",
             },
         )
 
     def mark_failed(self, job_id: str, error_message: str, duration_seconds: float | None = None) -> None:
-        updates: dict[str, object] = {"status": JobStatus.failed, "error_message": error_message[:1000]}
+        updates: dict[str, object] = {
+            "status": JobStatus.failed,
+            "error_message": error_message[:1000],
+            "progress_percent": 100,
+            "progress_stage": "Fallido",
+        }
         if duration_seconds is not None:
             updates["duration_seconds"] = round(duration_seconds, 3)
         self._update(job_id, updates)

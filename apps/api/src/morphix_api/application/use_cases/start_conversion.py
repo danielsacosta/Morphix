@@ -27,4 +27,6 @@ class StartConversionUseCase:
             state_machine_execution_arn=execution_arn,
             queued_at=queued_at,
             error_message=None,
+            progress_percent=10,
+            progress_stage="En cola",
         )

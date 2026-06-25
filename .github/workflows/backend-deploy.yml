@@ -9,9 +9,11 @@ on:
       - infra/blueprints/modules/api/**
       - infra/blueprints/modules/fargate-worker/**
       - infra/blueprints/modules/conversion-queue/**
+      - infra/blueprints/modules/jobs-db/**
       - infra/terraform/live/services/api/**
       - infra/terraform/live/services/worker/**
       - infra/terraform/live/shared/conversion-queue/**
+      - infra/terraform/live/shared/jobs-db/**
       - .github/workflows/backend-deploy.yml
   workflow_dispatch:
     inputs:
@@ -91,6 +93,9 @@ jobs:
                   deploy_api=true
                   deploy_worker=true
                   ;;
+                infra/blueprints/modules/jobs-db/*|infra/terraform/live/shared/jobs-db/*)
+                  deploy_api=true
+                  ;;
                 .github/workflows/backend-deploy.yml)
                   deploy_api=true
                   deploy_worker=true
@@ -168,6 +173,11 @@ jobs:
       - name: Apply conversion queue
         if: needs.scope.outputs.deploy_api == 'true' || needs.scope.outputs.deploy_worker == 'true'
         working-directory: infra/terraform/live/shared/conversion-queue
+        run: terragrunt apply -input=false -no-color -auto-approve
+
+      - name: Apply jobs database
+        if: needs.scope.outputs.deploy_api == 'true' || needs.scope.outputs.deploy_worker == 'true'
+        working-directory: infra/terraform/live/shared/jobs-db
         run: terragrunt apply -input=false -no-color -auto-approve
 
       - name: Test worker

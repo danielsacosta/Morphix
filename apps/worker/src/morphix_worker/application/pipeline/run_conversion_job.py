@@ -44,8 +44,11 @@ class ConversionJobPipeline:
             self.supported_conversion_policy.assert_supported(job.source_format, job.target_format)
 
             with self.workspace_manager.create() as workspace:
+                self.repository.update_progress(job.job_id, 35, "Descargando archivo")
                 input_path = download_input(self.storage, job, workspace)
+                self.repository.update_progress(job.job_id, 60, "Convirtiendo archivo")
                 output_path = convert_file(self.converters, job, input_path, workspace, self.timeout_seconds)
+                self.repository.update_progress(job.job_id, 85, "Subiendo resultado")
                 output_key = upload_output(self.storage, job, output_path)
 
             duration = time.monotonic() - started_at
@@ -55,4 +58,3 @@ class ConversionJobPipeline:
             duration = time.monotonic() - started_at
             message = mark_failed(self.repository, job, duration)
             return ConversionResult(job_id=job.job_id, status="FAILED", output_key=job.output_key, error_message=message)
-

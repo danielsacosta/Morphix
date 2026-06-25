@@ -28,6 +28,8 @@ export interface JobRecord {
   queue_position?: number | null;
   queued_at?: string | null;
   queue_message_id?: string | null;
+  progress_percent?: number | null;
+  progress_stage?: string | null;
 }
 
 export interface CreateJobResponse {

@@ -2,8 +2,9 @@ locals {
   name        = "${var.project_name}-${var.environment}"
   bucket_name = var.frontend_bucket_name != "" ? var.frontend_bucket_name : "${local.name}-frontend"
   runtime_config_json = jsonencode({
-    apiBaseUrl    = trimsuffix(var.api_base_url, "/")
-    maxFileSizeMb = var.max_file_size_mb
+    apiBaseUrl      = trimsuffix(var.api_base_url, "/")
+    websocketApiUrl = trimsuffix(var.websocket_api_url, "/")
+    maxFileSizeMb   = var.max_file_size_mb
   })
 }
 

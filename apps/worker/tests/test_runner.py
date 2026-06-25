@@ -23,6 +23,10 @@ class FakeStorage:
 class FakeRepository:
     def __init__(self) -> None:
         self.events: list[tuple[str, str]] = []
+        self.progress_events: list[tuple[str, int, str]] = []
+
+    def update_progress(self, job_id: str, progress_percent: int, progress_stage: str) -> None:
+        self.progress_events.append((job_id, progress_percent, progress_stage))
 
     def mark_processing(self, job_id: str) -> None:
         self.events.append((job_id, "PROCESSING"))

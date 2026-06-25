@@ -29,6 +29,8 @@ class Job:
     queue_position: int | None = None
     queued_at: str | None = None
     queue_message_id: str | None = None
+    progress_percent: int | None = None
+    progress_stage: str | None = None
 
     def to_item(self) -> dict[str, Any]:
         item = asdict(self)
@@ -59,4 +61,6 @@ class Job:
             queue_position=int(item["queue_position"]) if item.get("queue_position") is not None else None,
             queued_at=item.get("queued_at"),
             queue_message_id=item.get("queue_message_id"),
+            progress_percent=int(item["progress_percent"]) if item.get("progress_percent") is not None else None,
+            progress_stage=item.get("progress_stage"),
         )

@@ -7,6 +7,9 @@ resource "aws_dynamodb_table" "jobs" {
   billing_mode = var.billing_mode
   hash_key     = "job_id"
 
+  stream_enabled   = true
+  stream_view_type = "NEW_AND_OLD_IMAGES"
+
   attribute {
     name = "job_id"
     type = "S"
@@ -59,4 +62,3 @@ resource "aws_dynamodb_table" "jobs" {
     Name = local.name
   })
 }
-

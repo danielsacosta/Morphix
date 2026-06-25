@@ -2,7 +2,10 @@ locals {
   name                              = "${var.project_name}-${var.environment}"
   create_runtime                    = var.api_package_path != ""
   log_group                         = "/aws/lambda/${local.name}-api"
+  websocket_log_group               = "/aws/lambda/${local.name}-websocket"
+  broadcaster_log_group             = "/aws/lambda/${local.name}-realtime-broadcaster"
   state_machine_log_group           = "/aws/stepfunctions/${local.name}-conversion"
+  jobs_table_stream_policy_arn      = var.jobs_table_stream_arn != "" ? var.jobs_table_stream_arn : "${var.jobs_table_arn}/stream/*"
   state_machine_definition_template = file(var.state_machine_definition_path)
   state_machine_definition = replace(
     replace(
@@ -25,6 +28,49 @@ resource "aws_cloudwatch_log_group" "api" {
   tags              = var.tags
 }
 
+resource "aws_cloudwatch_log_group" "websocket" {
+  name              = local.websocket_log_group
+  retention_in_days = 14
+  tags              = var.tags
+}
+
+resource "aws_cloudwatch_log_group" "broadcaster" {
+  name              = local.broadcaster_log_group
+  retention_in_days = 14
+  tags              = var.tags
+}
+
+resource "aws_dynamodb_table" "websocket_connections" {
+  name         = "${local.name}-websocket-connections"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "connection_id"
+
+  attribute {
+    name = "connection_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "user_id-index"
+    hash_key        = "user_id"
+    projection_type = "ALL"
+  }
+
+  ttl {
+    attribute_name = "expires_at"
+    enabled        = true
+  }
+
+  tags = merge(var.tags, {
+    Name = "${local.name}-websocket-connections"
+  })
+}
+
 data "aws_iam_policy_document" "assume" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -34,6 +80,8 @@ data "aws_iam_policy_document" "assume" {
     }
   }
 }
+
+data "aws_caller_identity" "current" {}
 
 resource "aws_iam_role" "api" {
   name               = "${local.name}-api"
@@ -51,6 +99,37 @@ data "aws_iam_policy_document" "api" {
     sid       = "JobsTableAccess"
     actions   = ["dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:UpdateItem", "dynamodb:Query"]
     resources = [var.jobs_table_arn, "${var.jobs_table_arn}/index/*"]
+  }
+
+  statement {
+    sid = "WebSocketConnectionsTableAccess"
+    actions = [
+      "dynamodb:DeleteItem",
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+      "dynamodb:Query"
+    ]
+    resources = [
+      aws_dynamodb_table.websocket_connections.arn,
+      "${aws_dynamodb_table.websocket_connections.arn}/index/*"
+    ]
+  }
+
+  statement {
+    sid = "ReadJobsStream"
+    actions = [
+      "dynamodb:DescribeStream",
+      "dynamodb:GetRecords",
+      "dynamodb:GetShardIterator",
+      "dynamodb:ListStreams"
+    ]
+    resources = [local.jobs_table_stream_policy_arn]
+  }
+
+  statement {
+    sid       = "ManageWebSocketConnections"
+    actions   = ["execute-api:ManageConnections"]
+    resources = ["arn:aws:execute-api:${var.aws_region}:${data.aws_caller_identity.current.account_id}:*/*/POST/@connections/*"]
   }
 
   statement {
@@ -101,6 +180,66 @@ resource "aws_lambda_function" "api" {
 
   depends_on = [
     aws_cloudwatch_log_group.api,
+    aws_iam_role_policy_attachment.basic,
+    aws_iam_role_policy.api
+  ]
+
+  tags = var.tags
+}
+
+resource "aws_lambda_function" "websocket_connections" {
+  count = local.create_runtime ? 1 : 0
+
+  function_name    = "${local.name}-websocket"
+  role             = aws_iam_role.api.arn
+  package_type     = "Zip"
+  filename         = var.api_package_path
+  source_code_hash = filebase64sha256(var.api_package_path)
+  runtime          = "python3.11"
+  handler          = "morphix_api.realtime.connection_handler.handler"
+  architectures    = ["x86_64"]
+  timeout          = 10
+  memory_size      = 256
+
+  environment {
+    variables = {
+      CONNECTIONS_TABLE_NAME = aws_dynamodb_table.websocket_connections.name
+      CONNECTION_TTL_SECONDS = tostring(var.websocket_connection_ttl_seconds)
+    }
+  }
+
+  depends_on = [
+    aws_cloudwatch_log_group.websocket,
+    aws_iam_role_policy_attachment.basic,
+    aws_iam_role_policy.api
+  ]
+
+  tags = var.tags
+}
+
+resource "aws_lambda_function" "realtime_broadcaster" {
+  count = local.create_runtime ? 1 : 0
+
+  function_name    = "${local.name}-realtime-broadcaster"
+  role             = aws_iam_role.api.arn
+  package_type     = "Zip"
+  filename         = var.api_package_path
+  source_code_hash = filebase64sha256(var.api_package_path)
+  runtime          = "python3.11"
+  handler          = "morphix_api.realtime.broadcaster.handler"
+  architectures    = ["x86_64"]
+  timeout          = 30
+  memory_size      = 256
+
+  environment {
+    variables = {
+      CONNECTIONS_TABLE_NAME = aws_dynamodb_table.websocket_connections.name
+      WEBSOCKET_API_ENDPOINT = local.create_runtime ? "https://${aws_apigatewayv2_api.websocket[0].id}.execute-api.${var.aws_region}.amazonaws.com/${aws_apigatewayv2_stage.websocket[0].name}" : ""
+    }
+  }
+
+  depends_on = [
+    aws_cloudwatch_log_group.broadcaster,
     aws_iam_role_policy_attachment.basic,
     aws_iam_role_policy.api
   ]
@@ -164,6 +303,76 @@ resource "aws_lambda_permission" "api_gateway" {
   function_name = aws_lambda_function.api[0].function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.api[0].execution_arn}/*/*"
+}
+
+resource "aws_apigatewayv2_api" "websocket" {
+  count = local.create_runtime ? 1 : 0
+
+  name                       = "${local.name}-websocket"
+  protocol_type              = "WEBSOCKET"
+  route_selection_expression = "$request.body.action"
+
+  tags = var.tags
+}
+
+resource "aws_apigatewayv2_integration" "websocket_connections" {
+  count = local.create_runtime ? 1 : 0
+
+  api_id                 = aws_apigatewayv2_api.websocket[0].id
+  integration_type       = "AWS_PROXY"
+  integration_method     = "POST"
+  integration_uri        = aws_lambda_function.websocket_connections[0].invoke_arn
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "websocket_connect" {
+  count = local.create_runtime ? 1 : 0
+
+  api_id    = aws_apigatewayv2_api.websocket[0].id
+  route_key = "$connect"
+  target    = "integrations/${aws_apigatewayv2_integration.websocket_connections[0].id}"
+}
+
+resource "aws_apigatewayv2_route" "websocket_disconnect" {
+  count = local.create_runtime ? 1 : 0
+
+  api_id    = aws_apigatewayv2_api.websocket[0].id
+  route_key = "$disconnect"
+  target    = "integrations/${aws_apigatewayv2_integration.websocket_connections[0].id}"
+}
+
+resource "aws_apigatewayv2_stage" "websocket" {
+  count = local.create_runtime ? 1 : 0
+
+  api_id      = aws_apigatewayv2_api.websocket[0].id
+  name        = var.environment
+  auto_deploy = true
+
+  default_route_settings {
+    throttling_burst_limit = 100
+    throttling_rate_limit  = 50
+  }
+
+  tags = var.tags
+}
+
+resource "aws_lambda_permission" "websocket_api_gateway" {
+  count = local.create_runtime ? 1 : 0
+
+  statement_id  = "AllowWebSocketApiGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.websocket_connections[0].function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.websocket[0].execution_arn}/*/*"
+}
+
+resource "aws_lambda_event_source_mapping" "jobs_stream_broadcaster" {
+  count = local.create_runtime && var.jobs_table_stream_arn != "" ? 1 : 0
+
+  event_source_arn  = var.jobs_table_stream_arn
+  function_name     = aws_lambda_function.realtime_broadcaster[0].arn
+  starting_position = "LATEST"
+  batch_size        = 25
 }
 
 resource "aws_cloudwatch_log_group" "conversion" {

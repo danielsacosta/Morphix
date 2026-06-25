@@ -26,8 +26,9 @@ dependency "storage" {
 dependency "jobs_db" {
   config_path = "../../shared/jobs-db"
   mock_outputs = {
-    jobs_table_name = "morphix-dev-jobs"
-    jobs_table_arn  = "arn:aws:dynamodb:us-east-1:000000000000:table/morphix-dev-jobs"
+    jobs_table_name       = "morphix-dev-jobs"
+    jobs_table_arn        = "arn:aws:dynamodb:us-east-1:000000000000:table/morphix-dev-jobs"
+    jobs_table_stream_arn = "arn:aws:dynamodb:us-east-1:000000000000:table/morphix-dev-jobs/stream/2026-06-24T00:00:00.000"
   }
 }
 
@@ -47,6 +48,7 @@ inputs = {
   state_machine_definition_path   = "${get_terragrunt_dir()}/../../../../../apps/api/state_machine_definition.json"
   jobs_table_name                 = dependency.jobs_db.outputs.jobs_table_name
   jobs_table_arn                  = dependency.jobs_db.outputs.jobs_table_arn
+  jobs_table_stream_arn           = dependency.jobs_db.outputs.jobs_table_stream_arn
   input_bucket_name               = dependency.storage.outputs.input_bucket_name
   input_bucket_arn                = dependency.storage.outputs.input_bucket_arn
   output_bucket_name              = dependency.storage.outputs.output_bucket_name

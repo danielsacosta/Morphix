@@ -2,6 +2,7 @@ export { deleteJob, getDownloadUrl, getJob, listJobs } from './api/jobsApi';
 export { jobQueries } from './model/jobQueries';
 export { isActiveJobStatus, statusLabel } from './model/jobStatus';
 export { useJobPolling } from './model/useJobPolling';
+export { useJobRealtime } from './model/useJobRealtime';
 export { useBatchJobsPolling } from './model/useBatchJobsPolling';
 export { useJobsHistory } from './model/useJobsHistory';
 export { JobHistoryRow } from './ui/JobHistoryRow';

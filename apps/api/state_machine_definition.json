@@ -12,11 +12,13 @@
             "S.$": "$.job_id"
           }
         },
-        "UpdateExpression": "SET #status = :status, #updated_at = :updated_at, #queued_at = :queued_at",
+        "UpdateExpression": "SET #status = :status, #updated_at = :updated_at, #queued_at = :queued_at, #progress_percent = :progress_percent, #progress_stage = :progress_stage",
         "ExpressionAttributeNames": {
           "#status": "status",
           "#updated_at": "updated_at",
-          "#queued_at": "queued_at"
+          "#queued_at": "queued_at",
+          "#progress_percent": "progress_percent",
+          "#progress_stage": "progress_stage"
         },
         "ExpressionAttributeValues": {
           ":status": {
@@ -27,6 +29,12 @@
           },
           ":queued_at": {
             "S.$": "$$.State.EnteredTime"
+          },
+          ":progress_percent": {
+            "N": "10"
+          },
+          ":progress_stage": {
+            "S": "En cola"
           }
         }
       },
@@ -86,10 +94,12 @@
             "S.$": "$.job_id"
           }
         },
-        "UpdateExpression": "SET #status = :status, #updated_at = :updated_at",
+        "UpdateExpression": "SET #status = :status, #updated_at = :updated_at, #progress_percent = :progress_percent, #progress_stage = :progress_stage",
         "ExpressionAttributeNames": {
           "#status": "status",
-          "#updated_at": "updated_at"
+          "#updated_at": "updated_at",
+          "#progress_percent": "progress_percent",
+          "#progress_stage": "progress_stage"
         },
         "ExpressionAttributeValues": {
           ":status": {
@@ -97,6 +107,12 @@
           },
           ":updated_at": {
             "S.$": "$$.State.EnteredTime"
+          },
+          ":progress_percent": {
+            "N": "100"
+          },
+          ":progress_stage": {
+            "S": "Completado"
           }
         }
       },
@@ -112,11 +128,13 @@
             "S.$": "$.job_id"
           }
         },
-        "UpdateExpression": "SET #status = :status, #updated_at = :updated_at, #error_message = :error_message",
+        "UpdateExpression": "SET #status = :status, #updated_at = :updated_at, #error_message = :error_message, #progress_percent = :progress_percent, #progress_stage = :progress_stage",
         "ExpressionAttributeNames": {
           "#status": "status",
           "#updated_at": "updated_at",
-          "#error_message": "error_message"
+          "#error_message": "error_message",
+          "#progress_percent": "progress_percent",
+          "#progress_stage": "progress_stage"
         },
         "ExpressionAttributeValues": {
           ":status": {
@@ -127,6 +145,12 @@
           },
           ":error_message": {
             "S": "No fue posible convertir el archivo. Verifica que el archivo no este corrupto."
+          },
+          ":progress_percent": {
+            "N": "100"
+          },
+          ":progress_stage": {
+            "S": "Fallido"
           }
         }
       },

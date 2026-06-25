@@ -31,6 +31,12 @@ variable "api_base_url" {
   description = "API Gateway base URL exposed to the frontend runtime config."
 }
 
+variable "websocket_api_url" {
+  type        = string
+  description = "API Gateway WebSocket URL exposed to the frontend runtime config."
+  default     = ""
+}
+
 variable "max_file_size_mb" {
   type        = number
   description = "Maximum file size exposed to the frontend runtime config."

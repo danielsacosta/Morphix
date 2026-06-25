@@ -44,6 +44,8 @@ class JobSchema(BaseModel):
     queue_position: int | None = None
     queued_at: str | None = None
     queue_message_id: str | None = None
+    progress_percent: int | None = None
+    progress_stage: str | None = None
 
     @classmethod
     def from_domain(cls, job: Job) -> "JobSchema":

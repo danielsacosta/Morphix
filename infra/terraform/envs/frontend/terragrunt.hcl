@@ -13,7 +13,8 @@ locals {
 dependency "api" {
   config_path = "../../live/services/api"
   mock_outputs = {
-    api_endpoint = "http://localhost:8000"
+    api_endpoint       = "http://localhost:8000"
+    websocket_endpoint = "ws://localhost:8001/dev"
   }
   mock_outputs_allowed_terraform_commands = ["validate", "plan", "destroy"]
 }
@@ -25,6 +26,7 @@ inputs = {
   frontend_force_destroy = get_env("FRONTEND_FORCE_DESTROY", "false") == "true"
   frontend_price_class   = "PriceClass_100"
   api_base_url           = dependency.api.outputs.api_endpoint
+  websocket_api_url      = dependency.api.outputs.websocket_endpoint
   max_file_size_mb       = 100
   tags                   = local.root.locals.tags
 }

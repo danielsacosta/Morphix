@@ -83,9 +83,15 @@ export function ConversionWorkspace() {
                     </ItemTitle>
                     <ItemDescription className="truncate">
                       #{index + 1} en cola · {formatBytes(item.file.size)} · {item.sourceFormat.toUpperCase()}
+                      {item.job?.progress_stage ? ` · ${item.job.progress_stage}` : ''}
                       {item.error ? ` · ${item.error}` : ''}
                     </ItemDescription>
-                    {item.job && ['QUEUED', 'PROCESSING'].includes(item.job.status) && <Progress value={item.job.status === 'PROCESSING' ? 62 : 24} className="mt-1 h-1" />}
+                    {item.job && ['QUEUED', 'PROCESSING', 'COMPLETED', 'FAILED'].includes(item.job.status) && (
+                      <Progress
+                        value={item.job.progress_percent ?? (['COMPLETED', 'FAILED'].includes(item.job.status) ? 100 : item.job.status === 'PROCESSING' ? 62 : 24)}
+                        className="mt-1 h-1"
+                      />
+                    )}
                   </ItemContent>
                   <ItemActions>
                     {item.job && <DownloadJobButton job={item.job} variant="icon" onError={conversion.setError} />}

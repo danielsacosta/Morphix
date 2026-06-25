@@ -35,6 +35,12 @@ variable "jobs_table_arn" {
   description = "Jobs table ARN."
 }
 
+variable "jobs_table_stream_arn" {
+  type        = string
+  description = "Jobs table DynamoDB Stream ARN."
+  default     = ""
+}
+
 variable "input_bucket_name" {
   type        = string
   description = "Input bucket name."
@@ -69,6 +75,12 @@ variable "worker_callback_timeout_seconds" {
   type        = number
   description = "Maximum time Step Functions waits for a worker callback."
   default     = 1200
+}
+
+variable "websocket_connection_ttl_seconds" {
+  type        = number
+  description = "Seconds to keep idle websocket connection records."
+  default     = 86400
 }
 
 variable "max_file_size_mb" {
