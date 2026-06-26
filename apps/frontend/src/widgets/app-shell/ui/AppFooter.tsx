@@ -4,7 +4,7 @@ import { Separator } from '@/shared/ui/separator';
 export function AppFooter() {
   return (
     <footer className="border-t border-border/60 bg-background/70">
-      <div className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-6 text-sm text-muted-foreground sm:px-6 md:grid-cols-[1fr_auto] md:items-center">
+      <div className="mx-auto grid w-full max-w-7xl gap-4 px-4 py-6 text-sm text-muted-foreground sm:px-6 md:grid-cols-[1fr_auto] md:items-center">
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-primary ring-1 ring-border/70">
             <FileArchive className="size-4" aria-hidden="true" />
