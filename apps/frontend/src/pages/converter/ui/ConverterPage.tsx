@@ -19,16 +19,16 @@ export function ConverterPage() {
             <ConversionWorkspace />
           </div>
 
-          <div id="panel" className="scroll-mt-24 lg:sticky lg:top-24 lg:self-start">
-            <Tabs value={activeView} onValueChange={(value) => setActiveView(value as PanelView)}>
+          <div id="panel" className="scroll-mt-24">
+            <Tabs value={activeView} onValueChange={(value) => setActiveView(value as PanelView)} className="h-full">
               <TabsList className="w-full">
                 <TabsTrigger value="history">Historial</TabsTrigger>
                 <TabsTrigger value="overview">Resumen</TabsTrigger>
               </TabsList>
-              <TabsContent value="history">
+              <TabsContent value="history" className="min-h-0">
                 <JobsHistoryWidget />
               </TabsContent>
-              <TabsContent value="overview">
+              <TabsContent value="overview" className="min-h-0">
                 <ConversionOverviewWidget />
               </TabsContent>
             </Tabs>

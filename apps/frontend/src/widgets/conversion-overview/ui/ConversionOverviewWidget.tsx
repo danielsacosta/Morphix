@@ -39,7 +39,7 @@ export function ConversionOverviewWidget() {
 
   return (
     <section id="overview" aria-label="Resumen de conversiones" className="scroll-mt-24">
-      <Card className="border-border/70 bg-card/85 shadow-2xl shadow-black/20 backdrop-blur">
+      <Card className="h-full min-h-[620px] border-border/70 bg-card/85 shadow-2xl shadow-black/20 backdrop-blur sm:min-h-[560px]">
         <CardHeader className="border-b border-border/45 pb-5">
           <div className="space-y-1">
             <span className="text-xs font-semibold tracking-normal text-muted-foreground uppercase">Resumen</span>
@@ -47,7 +47,7 @@ export function ConversionOverviewWidget() {
           </div>
         </CardHeader>
 
-        <CardContent className="grid gap-4">
+        <CardContent className="grid flex-1 min-h-0 gap-4 overflow-y-auto">
           {isEmpty ? (
             <Empty className="min-h-32 border border-dashed border-border/70 bg-background/25">
               <EmptyHeader>
