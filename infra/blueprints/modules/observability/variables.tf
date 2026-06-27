@@ -14,17 +14,6 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
-variable "api_name" {
-  type        = string
-  description = "API Gateway name."
-  default     = ""
-}
-
-variable "api_log_group_name" {
-  type        = string
-  description = "API log group name."
-}
-
 variable "worker_log_group_name" {
   type        = string
   description = "Worker log group name."
@@ -33,11 +22,6 @@ variable "worker_log_group_name" {
 variable "state_machine_arn" {
   type        = string
   description = "State machine ARN."
-}
-
-variable "state_machine_name" {
-  type        = string
-  description = "State machine name."
 }
 
 variable "conversion_queue_name" {

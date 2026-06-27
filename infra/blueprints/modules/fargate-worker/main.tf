@@ -1,8 +1,7 @@
 locals {
-  name        = "${var.project_name}-${var.environment}"
-  image_uri   = var.worker_image_uri != "" ? var.worker_image_uri : "${aws_ecr_repository.worker.repository_url}:latest"
-  log_group   = "/aws/ecs/${local.name}-worker"
-  bucket_arns = [var.input_bucket_arn, "${var.input_bucket_arn}/*", var.output_bucket_arn, "${var.output_bucket_arn}/*"]
+  name      = "${var.project_name}-${var.environment}"
+  image_uri = var.worker_image_uri != "" ? var.worker_image_uri : "${aws_ecr_repository.worker.repository_url}:latest"
+  log_group = "/aws/ecs/${local.name}-worker"
 }
 
 resource "aws_ecr_repository" "worker" {

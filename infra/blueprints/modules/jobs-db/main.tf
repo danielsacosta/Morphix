@@ -37,16 +37,32 @@ resource "aws_dynamodb_table" "jobs" {
 
   global_secondary_index {
     name            = "GSI1"
-    hash_key        = "user_id"
-    range_key       = "created_at"
     projection_type = "ALL"
+
+    key_schema {
+      attribute_name = "user_id"
+      key_type       = "HASH"
+    }
+
+    key_schema {
+      attribute_name = "created_at"
+      key_type       = "RANGE"
+    }
   }
 
   global_secondary_index {
     name            = "GSI2"
-    hash_key        = "status"
-    range_key       = "updated_at"
     projection_type = "ALL"
+
+    key_schema {
+      attribute_name = "status"
+      key_type       = "HASH"
+    }
+
+    key_schema {
+      attribute_name = "updated_at"
+      key_type       = "RANGE"
+    }
   }
 
   ttl {
