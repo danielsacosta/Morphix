@@ -12,7 +12,7 @@ export function ConverterPage() {
 
   return (
     <div id="top" className="min-h-screen">
-      <AppHeader activeView={activeView} onViewChange={setActiveView} />
+      <AppHeader />
       <main className="mx-auto grid w-full max-w-7xl gap-5 px-4 py-5 sm:px-6 lg:py-8">
         <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
           <div className="w-full">

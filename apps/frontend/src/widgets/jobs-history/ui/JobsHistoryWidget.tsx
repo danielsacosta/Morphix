@@ -29,7 +29,7 @@ export function JobsHistoryWidget() {
           </CardAction>
         </CardHeader>
 
-        <CardContent className="grid flex-1 min-h-0 gap-3 overflow-y-auto">
+        <CardContent className="grid flex-1 min-h-0 content-start gap-3 overflow-y-auto">
           {jobs.data?.length === 0 && (
             <Empty className="min-h-32 border border-dashed border-border/70 bg-background/25">
               <EmptyHeader>

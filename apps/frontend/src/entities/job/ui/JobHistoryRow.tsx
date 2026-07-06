@@ -13,7 +13,7 @@ interface JobHistoryRowProps {
 export function JobHistoryRow({ job, leadingIcon, actions }: JobHistoryRowProps) {
   return (
     <Item variant="muted" className="gap-3 border-border/60 bg-background/35">
-      <ItemMedia variant="icon" className="size-11 rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
+      <ItemMedia variant="icon" className="size-10 rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
         {leadingIcon}
       </ItemMedia>
       <ItemContent className="min-w-0">
