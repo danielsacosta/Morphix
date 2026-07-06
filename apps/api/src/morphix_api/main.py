@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
@@ -24,6 +26,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     api.add_exception_handler(DomainError, domain_error_handler)
     api.include_router(health_router)
     api.include_router(jobs_router)
+
+    if (os.getenv("LOCAL_REALTIME") or "").lower() in {"1", "true", "yes"}:
+        from .realtime.local_realtime import register_local_realtime
+
+        register_local_realtime(api)
+
     return api
 
 

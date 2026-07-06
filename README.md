@@ -113,6 +113,28 @@ uv sync --all-packages --all-extras
 uv run --group dev pytest
 ```
 
+### Full stack on Docker Compose
+
+The whole system (frontend, API, worker, DynamoDB, S3, SQS, DynamoDB Streams, realtime WebSocket) runs locally with `docker compose up --build`. Step Functions is bypassed by a `LocalSQSConversionOrchestrator` that enqueues directly to LocalStack SQS, and the realtime WebSocket bridge is implemented by an in-process FastAPI endpoint plus a DynamoDB Streams poller — no prod adapter behavior changes when the local-only env vars are unset.
+
+```bash
+docker compose up --build
+```
+
+Services:
+
+| Service      | Port | Notes                                                                |
+|--------------|------|----------------------------------------------------------------------|
+| `frontend`   | 5173 | Vite dev server with HMR. Runtime config synthesized at start.       |
+| `api`        | 8000 | FastAPI on uvicorn (`--reload`). Includes `/ws` WebSocket endpoint.  |
+| `worker`     | -    | `queue_worker` polling LocalStack SQS. Source mounted read-only.     |
+| `localstack` | 4566 | Emulates DynamoDB, S3, SQS, DynamoDB Streams.                        |
+| `init`       | -    | One-shot, provisions tables/buckets/queues/DLQ before api + worker.  |
+
+The init container exits as soon as provisioning is done; api and worker only start after it completes successfully. Hot-reload works for the API (uvicorn reload) and the frontend (Vite HMR). Worker source is bind-mounted, so Python edits apply after `docker compose restart worker`.
+
+Local-only env toggles (transparent no-ops when unset in prod): `ORCHESTRATION_MODE`, `LOCAL_REALTIME`, `AWS_ENDPOINT_URL`, `S3_BROWSER_URL_BASE`.
+
 API local run requires AWS credentials and resources:
 
 ```bash

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import Annotated
 
 from fastapi import Header
@@ -13,10 +14,20 @@ from ....application.ports.object_url_service import ObjectUrlService
 from ....core.config import Settings
 from ....domain.errors import AuthenticationRequiredError
 
+
+def _build_conversion_orchestrator(settings: Settings) -> ConversionOrchestrator:
+    mode = (os.getenv("ORCHESTRATION_MODE") or "sfn").lower()
+    if mode == "local":
+        from ....adapters.outbound.local.orchestrator import LocalSQSConversionOrchestrator
+
+        return LocalSQSConversionOrchestrator(settings)
+    return StepFunctionsConversionOrchestrator(settings)
+
+
 _settings = Settings.from_env()
 _repository = DynamoDBJobsRepository(_settings)
 _object_url_service = S3PresignedUrlService(_settings)
-_conversion_orchestrator = StepFunctionsConversionOrchestrator(_settings)
+_conversion_orchestrator = _build_conversion_orchestrator(_settings)
 
 
 def get_settings() -> Settings:

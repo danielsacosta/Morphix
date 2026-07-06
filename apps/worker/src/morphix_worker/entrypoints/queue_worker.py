@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 
 from ..adapters.outbound.dynamodb.jobs_repository import DynamoDBJobRepository
 from ..adapters.outbound.s3.object_storage import S3ObjectStorage
@@ -24,6 +25,13 @@ def build_pipeline(settings: Settings) -> ConversionJobPipeline:
     )
 
 
+def _build_callback(settings: Settings) -> StepFunctionsTaskCallback | None:
+    mode = (os.getenv("ORCHESTRATION_MODE") or "sfn").lower()
+    if mode == "local":
+        return None
+    return StepFunctionsTaskCallback(settings)
+
+
 def run_queue_worker(settings: Settings | None = None) -> int:
     configure_logging()
     resolved_settings = settings or Settings.from_env()
@@ -31,7 +39,7 @@ def run_queue_worker(settings: Settings | None = None) -> int:
         raise RuntimeError("CONVERSION_QUEUE_URL is required for queue worker mode")
 
     queue = SQSConversionQueue(resolved_settings)
-    callback = StepFunctionsTaskCallback(resolved_settings)
+    callback = _build_callback(resolved_settings)
     pipeline = build_pipeline(resolved_settings)
 
     while True:
@@ -47,13 +55,17 @@ def run_queue_worker(settings: Settings | None = None) -> int:
             job = load_job(payload)
             result = pipeline.run(job)
         except Exception as exc:
-            if task_token:
+            # The pipeline catches conversion errors internally and persists
+            # FAILURE to the repository. Anything reaching here is a
+            # non-conversion failure (e.g. malformed payload). In SFN mode we
+            # report the failure to Step Functions; the queue message is always
+            # deleted so the worker loop stays alive in local mode.
+            if task_token and callback:
                 callback.send_failure(str(task_token), str(exc))
-                queue.delete(message)
-                continue
-            raise
+            queue.delete(message)
+            continue
 
         print(result.to_json())
-        if task_token:
+        if task_token and callback:
             callback.send_result(str(task_token), result)
         queue.delete(message)

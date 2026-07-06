@@ -1,0 +1,110 @@
+services:
+  localstack:
+    image: localstack/localstack:3.7
+    environment:
+      SERVICES: dynamodb,s3,sqs,dynamodbstreams
+      EXTRA_CORS_ALLOWED_HEADERS: "x-amz-request-id,x-amz-id-2"
+      DISABLE_CORS_CHECKS: "1"
+    ports:
+      - "4566:4566"
+    volumes:
+      - localstack_data:/var/lib/localstack
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  init:
+    image: localstack/localstack:3.7
+    entrypoint: ["/bin/bash", "/etc/localstack/init-bootstrap.sh"]
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://localstack:4566
+      LOCALSTACK_HOST: localstack
+    volumes:
+      - ./scripts/localstack-init.sh:/etc/localstack/init-bootstrap.sh:ro
+    depends_on:
+      localstack:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8000:8000"
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PROJECT_NAME: morphix
+      ENVIRONMENT: local
+      AWS_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      JOBS_TABLE_NAME: morphix-dev-jobs
+      CONNECTIONS_TABLE_NAME: morphix-dev-websocket-connections
+      INPUT_BUCKET: morphix-dev-input
+      OUTPUT_BUCKET: morphix-dev-output
+      CONVERSION_QUEUE_URL: http://localstack:4566/000000000000/morphix-dev-conversions
+      ORCHESTRATION_MODE: local
+      LOCAL_REALTIME: "1"
+      S3_BROWSER_URL_BASE: http://localhost:4566
+    volumes:
+      - ./apps/api/src:/app/src
+    depends_on:
+      init:
+        condition: service_completed_successfully
+
+  worker:
+    build:
+      context: ./apps/worker
+      dockerfile: Dockerfile.dev
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PROJECT_NAME: morphix
+      ENVIRONMENT: local
+      AWS_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      JOBS_TABLE_NAME: morphix-dev-jobs
+      INPUT_BUCKET: morphix-dev-input
+      OUTPUT_BUCKET: morphix-dev-output
+      CONVERSION_QUEUE_URL: http://localstack:4566/000000000000/morphix-dev-conversions
+      WORKDIR: /tmp/morphix
+      ORCHESTRATION_MODE: local
+    volumes:
+      - ./apps/worker/src:/app/src:ro
+    depends_on:
+      init:
+        condition: service_completed_successfully
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./apps/frontend/Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:8000
+      WEBSOCKET_API_URL: ws://localhost:8000/ws
+    volumes:
+      - ./apps/frontend:/app/apps/frontend
+      - ./package.json:/app/package.json:ro
+      - ./bun.lock:/app/bun.lock:ro
+      - /app/apps/frontend/node_modules
+      - /app/node_modules
+    working_dir: /app/apps/frontend
+    command: >-
+      sh -c "mkdir -p public && echo '{\"apiBaseUrl\":\"http://localhost:8000\",\"websocketApiUrl\":\"ws://localhost:8000/ws\",\"maxFileSizeMb\":100}'
+      > public/runtime-config.json && exec bun run dev"
+    depends_on:
+      - api
+
+volumes:
+  localstack_data:
