@@ -104,51 +104,36 @@ Provisioned with Terraform modules (`infra/blueprints/modules`) and Terragrunt l
 
 No `Taskfile.yml` by design, matching MVP scope.
 
-## Local Verification
-
-```bash
-bun install --frozen-lockfile
-bun run build
-uv sync --all-packages --all-extras
-uv run --group dev pytest
-```
-
-### Full stack on Docker Compose
-
-The whole system (frontend, API, worker, DynamoDB, S3, SQS, DynamoDB Streams, realtime WebSocket) runs locally with `docker compose up --build`. Step Functions is bypassed by a `LocalSQSConversionOrchestrator` that enqueues directly to LocalStack SQS, and the realtime WebSocket bridge is implemented by an in-process FastAPI endpoint plus a DynamoDB Streams poller — no prod adapter behavior changes when the local-only env vars are unset.
+## Local usage
 
 ```bash
 docker compose up --build
 ```
 
-Services:
+The full system runs locally on Docker Compose: frontend (Vite dev with HMR), FastAPI API on uvicorn with reload, conversion worker polling SQS, and LocalStack emulating DynamoDB, S3, SQS and DynamoDB Streams. An `init` container provisions the tables, buckets and queues before the API and worker start.
 
-| Service      | Port | Notes                                                                |
-|--------------|------|----------------------------------------------------------------------|
-| `frontend`   | 5173 | Vite dev server with HMR. Runtime config synthesized at start.       |
-| `api`        | 8000 | FastAPI on uvicorn (`--reload`). Includes `/ws` WebSocket endpoint.  |
-| `worker`     | -    | `queue_worker` polling LocalStack SQS. Source mounted read-only.     |
-| `localstack` | 4566 | Emulates DynamoDB, S3, SQS, DynamoDB Streams.                        |
-| `init`       | -    | One-shot, provisions tables/buckets/queues/DLQ before api + worker.  |
-
-The init container exits as soon as provisioning is done; api and worker only start after it completes successfully. Hot-reload works for the API (uvicorn reload) and the frontend (Vite HMR). Worker source is bind-mounted, so Python edits apply after `docker compose restart worker`.
-
-Local-only env toggles (transparent no-ops when unset in prod): `ORCHESTRATION_MODE`, `LOCAL_REALTIME`, `AWS_ENDPOINT_URL`, `S3_BROWSER_URL_BASE`.
-
-API local run requires AWS credentials and resources:
-
-```bash
-export PROJECT_NAME=morphix
-export ENVIRONMENT=dev
-export AWS_REGION=us-east-1
-export JOBS_TABLE_NAME=morphix-dev-jobs
-export INPUT_BUCKET=morphix-dev-input
-export OUTPUT_BUCKET=morphix-dev-output
-export STATE_MACHINE_ARN=arn:aws:states:us-east-1:123456789012:stateMachine:morphix-dev-conversion
-uv run --group dev uvicorn morphix_api.main:app --reload
+```mermaid
+flowchart LR
+    Browser["Browser (Vite :5173)"] -->|HTTP + X-User-Id| API["FastAPI :8000<br/>uvicorn --reload"]
+    Browser <-->|WebSocket /ws| API
+    Browser -->|presigned PUT/GET| LS[("LocalStack :4566<br/>S3 input/output")]
+    API -->|mark QUEUED + enqueue| LS
+    API -->|poll DynamoDB Streams| LS
+    Worker["Worker<br/>queue_worker"] -->|poll SQS| LS
+    Worker -->|download input| LS
+    Worker -->|convert| LocalBin["LibreOffice / FFmpeg / ImageMagick"]
+    Worker -->|upload output + mark COMPLETED| LS
 ```
 
-Python deps are managed with `uv`. Do not use manual `python -m venv` or direct `pip install` for backend work.
+1. Open http://localhost:5173. The frontend ships with a synthetic `runtime-config.json` that wires it to the API at `http://localhost:8000` and the realtime WebSocket at `ws://localhost:8000/ws`.
+2. Upload a supported file from the UI. The API issues a presigned URL rewritten to `http://localhost:4566` so the browser uploads directly to LocalStack S3.
+3. Start the conversion. The local `LocalSQSConversionOrchestrator` enqueues the job to SQS and marks it `QUEUED` in DynamoDB — no Step Functions needed.
+4. The worker picks the message, runs the conversion pipeline (download → convert → upload) and persists `PROCESSING → COMPLETED` (or `FAILED`) in DynamoDB.
+5. A background poller on the API reads DynamoDB Streams and pushes `job.updated` events over WebSocket, so the UI updates in realtime.
+
+Hot-reload applies to the API (`uvicorn --reload`) and the frontend (Vite HMR). To apply worker changes, run `docker compose restart worker`. Use `docker compose down -v` to wipe LocalStack state; `docker compose down` keeps it persisted.
+
+API docs: http://localhost:8000/docs. The `X-User-Id` header (any string ≤128 chars) identifies the job owner and is stored in `localStorage` between sessions.
 
 ## MVP Limits
 

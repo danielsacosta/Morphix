@@ -104,29 +104,36 @@ Aprovisionada con módulos Terraform (`infra/blueprints/modules`) y stacks live 
 
 Sin `Taskfile.yml` a propósito, ajustándose al scope MVP.
 
-## Verificación local
+## Uso local
 
 ```bash
-bun install --frozen-lockfile
-bun run build
-uv sync --all-packages --all-extras
-uv run --group dev pytest
+docker compose up --build
 ```
 
-Ejecutar la API localmente requiere credenciales y recursos AWS:
+El sistema completo corre localmente en Docker Compose: frontend (Vite dev con HMR), API FastAPI en uvicorn con reload, worker de conversión sondeando SQS, y LocalStack emulando DynamoDB, S3, SQS y DynamoDB Streams. Un contenedor `init` provisiona las tablas, buckets y colas antes de que arranquen la API y el worker.
 
-```bash
-export PROJECT_NAME=morphix
-export ENVIRONMENT=dev
-export AWS_REGION=us-east-1
-export JOBS_TABLE_NAME=morphix-dev-jobs
-export INPUT_BUCKET=morphix-dev-input
-export OUTPUT_BUCKET=morphix-dev-output
-export STATE_MACHINE_ARN=arn:aws:states:us-east-1:123456789012:stateMachine:morphix-dev-conversion
-uv run --group dev uvicorn morphix_api.main:app --reload
+```mermaid
+flowchart LR
+    Browser["Navegador (Vite :5173)"] -->|HTTP + X-User-Id| API["FastAPI :8000<br/>uvicorn --reload"]
+    Browser <-->|WebSocket /ws| API
+    Browser -->|PUT/GET prefirmado| LS[("LocalStack :4566<br/>S3 entrada/salida")]
+    API -->|marca QUEUED + encola| LS
+    API -->|sondea DynamoDB Streams| LS
+    Worker["Worker<br/>queue_worker"] -->|sondea SQS| LS
+    Worker -->|descarga entrada| LS
+    Worker -->|convierte| LocalBin["LibreOffice / FFmpeg / ImageMagick"]
+    Worker -->|sube salida + marca COMPLETED| LS
 ```
 
-Las dependencias Python se gestionan con `uv`. No uses `python -m venv` manual ni `pip install` directo para backend.
+1. Abrí http://localhost:5173. El frontend se entrega con un `runtime-config.json` sintético que lo conecta a la API en `http://localhost:8000` y al WebSocket de tiempo real en `ws://localhost:8000/ws`.
+2. Subí un archivo soportado desde la UI. La API emite una URL prefirmada reescrita a `http://localhost:4566` para que el navegador suba directo a S3 en LocalStack.
+3. Iniciá la conversión. El `LocalSQSConversionOrchestrator` encola el job en SQS y lo marca `QUEUED` en DynamoDB — sin Step Functions.
+4. El worker toma el mensaje, ejecuta el pipeline de conversión (descarga → convierte → sube) y persiste `PROCESSING → COMPLETED` (o `FAILED`) en DynamoDB.
+5. Un poller en la API lee DynamoDB Streams y pushea eventos `job.updated` por WebSocket, así la UI se actualiza en tiempo real.
+
+El hot-reload aplica a la API (`uvicorn --reload`) y al frontend (Vite HMR). Para aplicar cambios del worker, ejecutá `docker compose restart worker`. Usá `docker compose down -v` para limpiar el estado de LocalStack; `docker compose down` lo persiste en el volumen.
+
+Docs de la API: http://localhost:8000/docs. El header `X-User-Id` (cualquier string ≤128 caracteres) identifica al dueño del job y se guarda en `localStorage` entre sesiones.
 
 ## Límites MVP
 
