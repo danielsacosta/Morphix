@@ -3,6 +3,10 @@ name = "morphix-python"
 version = "0.1.0"
 description = "Python workspace for Morphix API and worker."
 requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [
+  { name = "Daniel Santiago Acosta", email = "santiagoacosta1013@gmail.com" },
+]
 dependencies = [
   "morphix-api",
   "morphix-worker"

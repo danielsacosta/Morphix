@@ -4,6 +4,8 @@
 
 Aplicación web para conversión asíncrona de archivos sin APIs externas de conversión. Frontend React/Vite, API FastAPI, worker de conversión en Python, infraestructura Terraform/Terragrunt y despliegues con GitHub Actions.
 
+Licenciado bajo la [Licencia Apache 2.0](LICENSE).
+
 ## Arquitectura
 
 Cuatro límites explícitos: el frontend posee el flujo de usuario, la API posee la coordinación de jobs y la seguridad, el worker posee la ejecución de conversiones, y la infraestructura posee el despliegue, aislamiento, almacenamiento y observabilidad.

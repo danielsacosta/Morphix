@@ -8,6 +8,10 @@ version = "0.1.0"
 description = "FastAPI backend for Morphix conversion jobs."
 readme = "README.md"
 requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [
+  { name = "Daniel Santiago Acosta", email = "santiagoacosta1013@gmail.com" },
+]
 dependencies = [
   "boto3>=1.35.0",
   "fastapi>=0.115.0",

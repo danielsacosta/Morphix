@@ -4,6 +4,8 @@
 
 Web app for asynchronous file conversion without external conversion APIs. React/Vite frontend, FastAPI API, Python conversion worker, Terraform/Terragrunt infrastructure, and GitHub Actions deployments.
 
+Licensed under the [Apache License 2.0](LICENSE).
+
 ## Architecture
 
 Four explicit boundaries: frontend owns the user workflow, API owns job coordination and security, worker owns conversion execution, infrastructure owns deployment, isolation, storage and observability.
