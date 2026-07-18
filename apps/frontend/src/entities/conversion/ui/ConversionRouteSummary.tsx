@@ -15,7 +15,7 @@ export function ConversionRouteSummary({ pair }: ConversionRouteSummaryProps) {
       </ItemMedia>
       <ItemContent>
         <ItemTitle className="font-black">{pair.label}</ItemTitle>
-        <ItemDescription>{pair.description}</ItemDescription>
+        <ItemDescription className="font-medium text-foreground">{pair.description}</ItemDescription>
       </ItemContent>
       <Badge variant="outline" className="border-foreground">
         Formato

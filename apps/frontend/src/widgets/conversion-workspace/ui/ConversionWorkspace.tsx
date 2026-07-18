@@ -4,6 +4,7 @@ import { acceptedExtensions, ConversionRouteSummary, type ConversionPair } from 
 import { JobStatusBadge } from '../../../entities/job';
 import { ConvertButton, ConversionProgress, useConvertFile } from '../../../features/convert-file';
 import { DownloadJobButton } from '../../../features/download-job-result';
+import { FilePreviewButton } from '../../../features/preview-file';
 import { TargetFormatGrid, useTargetFormat } from '../../../features/select-target-format';
 import { env } from '../../../shared/config/env';
 import { formatBytes } from '../../../shared/lib/formatBytes';
@@ -64,7 +65,7 @@ export function ConversionWorkspace() {
             <div className="grid min-w-0 gap-2">
               <span className="font-mono text-[0.65rem] font-black tracking-[0.16em] text-primary uppercase">{phaseLabel[phase]}</span>
               <CardTitle className="text-3xl font-black tracking-[-0.06em] sm:text-5xl">{phaseTitle[phase]}</CardTitle>
-              <p className="max-w-2xl text-base font-medium leading-relaxed text-muted-foreground">{phaseDescription[phase]}</p>
+              <p className="max-w-2xl text-base font-medium leading-relaxed text-muted-foreground">{phase === 'format' && conversion.files.length > 1 ? 'Selecciona el resultado que necesitas. Solo mostramos opciones compatibles con tus archivos.' : phaseDescription[phase]}</p>
             </div>
             {phase !== 'upload' && <span className="hidden shrink-0 border-2 border-border bg-secondary px-3 py-1 font-mono text-[0.65rem] font-black tracking-[0.1em] uppercase sm:inline">{conversion.files.length} {conversion.files.length === 1 ? 'archivo' : 'archivos'}</span>}
           </div>
@@ -76,6 +77,7 @@ export function ConversionWorkspace() {
           {phase === 'format' && (
             <FormatPhase
               sourceFormat={conversion.sourceFormat}
+              fileCount={conversion.files.length}
               totalSize={totalSize}
               options={target.targetOptions}
               targetFormat={target.targetFormat}
@@ -131,11 +133,11 @@ function UploadPhase({ inputRef, acceptedFormatsLabel, onSelect }: { inputRef: R
   );
 }
 
-function FormatPhase({ sourceFormat, totalSize, options, targetFormat, onSelect, onChangeFiles, errors }: { sourceFormat: string; totalSize: number; options: ConversionPair[]; targetFormat: string; onSelect: (targetFormat: string) => void; onChangeFiles: () => void; errors: ReactNode }) {
+function FormatPhase({ sourceFormat, fileCount, totalSize, options, targetFormat, onSelect, onChangeFiles, errors }: { sourceFormat: string; fileCount: number; totalSize: number; options: ConversionPair[]; targetFormat: string; onSelect: (targetFormat: string) => void; onChangeFiles: () => void; errors: ReactNode }) {
   return (
     <div className="grid gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3 border-2 border-border bg-secondary p-4">
-        <div className="flex min-w-0 items-center gap-3"><span className="flex size-10 items-center justify-center border-2 border-border bg-foreground text-background"><FileText className="size-5" aria-hidden="true" /></span><span className="grid min-w-0 gap-1"><span className="font-mono text-sm font-black tracking-[0.14em] uppercase">{sourceFormat.toUpperCase()}</span><span className="font-mono text-[0.65rem] font-bold tracking-[0.1em] text-muted-foreground uppercase">{formatBytes(totalSize)} · Archivo listo</span></span></div>
+        <div className="flex min-w-0 items-center gap-3"><span className="flex size-10 items-center justify-center border-2 border-border bg-foreground text-background"><FileText className="size-5" aria-hidden="true" /></span><span className="grid min-w-0 gap-1"><span className="font-mono text-sm font-black tracking-[0.14em] uppercase">{sourceFormat.toUpperCase()}</span><span className="font-mono text-[0.65rem] font-bold tracking-[0.1em] text-muted-foreground uppercase">{formatBytes(totalSize)} · {fileCount === 1 ? 'Archivo listo' : 'Archivos listos'}</span></span></div>
         <Button variant="outline" size="sm" type="button" onClick={onChangeFiles}><RefreshCw className="size-3" aria-hidden="true" /> Cambiar</Button>
       </div>
       {errors}
@@ -153,7 +155,7 @@ function ReviewPhase({ files, sourceFormat, targetPair, totalSize, onBack }: { f
   return (
     <div className="grid gap-5">
       <div className="grid gap-3 border-2 border-border bg-secondary p-5 sm:grid-cols-3"><SummaryCell label="Archivos" value={`${files.length}`} /><SummaryCell label="Origen" value={sourceFormat.toUpperCase()} /><SummaryCell label="Tamaño total" value={formatBytes(totalSize)} /></div>
-      <div className="grid gap-2"><span className="font-mono text-[0.65rem] font-black tracking-[0.15em] text-muted-foreground uppercase">Archivos seleccionados</span><ItemGroup className="gap-2">{files.map((file) => <Item key={`${file.name}-${file.size}`} variant="muted" className="p-3"><ItemMedia className="size-9 border-2 border-border bg-foreground text-background"><FileText className="size-4" aria-hidden="true" /></ItemMedia><ItemContent className="min-w-0"><ItemTitle className="truncate font-black">{file.name}</ItemTitle><ItemDescription className="font-mono text-[0.65rem] uppercase">{formatBytes(file.size)}</ItemDescription></ItemContent></Item>)}</ItemGroup></div>
+      <div className="grid gap-2"><span className="font-mono text-[0.65rem] font-black tracking-[0.15em] text-muted-foreground uppercase">Archivos seleccionados</span><ItemGroup className="gap-2">{files.map((file) => <Item key={`${file.name}-${file.size}`} variant="muted" className="p-3"><ItemMedia className="size-9 border-2 border-border bg-foreground text-background"><FileText className="size-4" aria-hidden="true" /></ItemMedia><ItemContent className="min-w-0"><ItemTitle className="truncate font-black">{file.name}</ItemTitle><ItemDescription className="font-mono text-[0.65rem] uppercase">{formatBytes(file.size)}</ItemDescription></ItemContent><ItemActions><FilePreviewButton file={file} /></ItemActions></Item>)}</ItemGroup></div>
       {targetPair && <ConversionRouteSummary pair={targetPair} />}
     </div>
   );
@@ -161,7 +163,7 @@ function ReviewPhase({ files, sourceFormat, targetPair, totalSize, onBack }: { f
 
 function ProgressPhase({ conversion, onNewConversion }: { conversion: ReturnType<typeof useConvertFile>; onNewConversion: () => void }) {
   return (
-    <div className="grid gap-6"><ConversionProgress currentJobs={conversion.currentJobs} fileCount={conversion.files.length} flowState={conversion.flowState} /><ItemGroup className="gap-3">{conversion.queue.map((item, index) => <Item key={item.id} variant="muted" className="gap-3 p-4"><ItemMedia className="size-10 border-2 border-border bg-foreground text-background"><FileText className="size-5" aria-hidden="true" /></ItemMedia><ItemContent className="min-w-0 gap-2"><ItemTitle className="max-w-full justify-between gap-2 font-black"><span className="truncate">{item.file.name}</span>{item.job && <JobStatusBadge status={item.job.status} />}</ItemTitle><ItemDescription className="truncate font-mono text-[0.65rem] uppercase">#{index + 1} · {formatBytes(item.file.size)}{item.job?.progress_stage ? ` · ${item.job.progress_stage}` : ''}{item.error ? ` · ${item.error}` : ''}</ItemDescription>{item.job && <Progress value={item.job.progress_percent ?? (item.job.status === 'COMPLETED' || item.job.status === 'FAILED' ? 100 : item.job.status === 'PROCESSING' ? 62 : 24)} className="h-2" />}</ItemContent><ItemActions>{item.job && <DownloadJobButton job={item.job} variant="icon" onError={conversion.setError} />}</ItemActions></Item>)}</ItemGroup><div className="flex justify-end border-t-2 border-border pt-5"><Button variant="outline" type="button" onClick={onNewConversion}><RefreshCw className="size-4" aria-hidden="true" /> Nueva conversión</Button></div></div>
+    <div className="grid gap-6"><ConversionProgress currentJobs={conversion.currentJobs} fileCount={conversion.files.length} flowState={conversion.flowState} /><ItemGroup className="gap-3">{conversion.queue.map((item, index) => <Item key={item.id} variant="muted" className="gap-3 p-4"><ItemMedia className="size-10 border-2 border-border bg-foreground text-background"><FileText className="size-5" aria-hidden="true" /></ItemMedia><ItemContent className="min-w-0 gap-2"><ItemTitle className="max-w-full justify-between gap-2 font-black"><span className="truncate">{item.file.name}</span>{item.job && <JobStatusBadge status={item.job.status} />}</ItemTitle><ItemDescription className="truncate font-mono text-[0.65rem] uppercase">#{index + 1} · {formatBytes(item.file.size)}{item.job?.progress_stage ? ` · ${item.job.progress_stage}` : ''}{item.error ? ` · ${item.error}` : ''}</ItemDescription>{item.job && <Progress value={item.job.progress_percent ?? (item.job.status === 'COMPLETED' || item.job.status === 'FAILED' ? 100 : item.job.status === 'PROCESSING' ? 62 : 24)} className="h-2" />}</ItemContent><ItemActions><FilePreviewButton file={item.file} />{item.job && <DownloadJobButton job={item.job} variant="icon" onError={conversion.setError} />}</ItemActions></Item>)}</ItemGroup><div className="flex justify-end border-t-2 border-border pt-5"><Button variant="outline" type="button" onClick={onNewConversion}><RefreshCw className="size-4" aria-hidden="true" /> Nueva conversión</Button></div></div>
   );
 }
 
