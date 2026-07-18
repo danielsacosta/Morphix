@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type MouseEvent } from 'react';
+import { flushSync } from 'react-dom';
 import { ArrowUpRight, FileArchive, Moon, Sun } from 'lucide-react';
 import { Button } from '../../../shared/ui/button';
 
@@ -28,6 +29,27 @@ export function AppHeader({ activeSection, onNavigate }: AppHeaderProps) {
     }
   }, [isDark]);
 
+  function toggleTheme(event: MouseEvent<HTMLButtonElement>) {
+    const nextThemeIsDark = !isDark;
+    const root = document.documentElement;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const originX = event.clientX || rect.left + rect.width / 2;
+    const originY = event.clientY || rect.top + rect.height / 2;
+
+    root.style.setProperty('--theme-origin-x', `${originX}px`);
+    root.style.setProperty('--theme-origin-y', `${originY}px`);
+
+    const startViewTransition = 'startViewTransition' in document ? document.startViewTransition.bind(document) : undefined;
+    if (startViewTransition) {
+      startViewTransition(() => {
+        flushSync(() => setIsDark(nextThemeIsDark));
+      });
+      return;
+    }
+
+    setIsDark(nextThemeIsDark);
+  }
+
   return (
     <header className="sticky top-0 z-30 border-b-2 border-border bg-background">
       <div className="mx-auto flex w-full max-w-none items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
@@ -48,7 +70,7 @@ export function AppHeader({ activeSection, onNavigate }: AppHeaderProps) {
           aria-label={isDark ? 'Activar modo claro' : 'Activar modo oscuro'}
           title={isDark ? 'Activar modo claro' : 'Activar modo oscuro'}
           aria-pressed={isDark}
-          onClick={() => setIsDark((current) => !current)}
+          onClick={toggleTheme}
         >
           {isDark ? <Sun className="size-4" aria-hidden="true" /> : <Moon className="size-4" aria-hidden="true" />}
         </Button>

@@ -5,6 +5,29 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@keyframes morphix-theme-wipe {
+  from {
+    clip-path: circle(0 at var(--theme-origin-x) var(--theme-origin-y));
+  }
+
+  to {
+    clip-path: circle(150vmax at var(--theme-origin-x) var(--theme-origin-y));
+  }
+}
+
+::view-transition-group(root) {
+  animation: none;
+}
+
+::view-transition-old(root) {
+  animation: none;
+}
+
+::view-transition-new(root) {
+  animation: morphix-theme-wipe 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  isolation: isolate;
+}
+
 @theme inline {
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   --color-background: var(--background);
@@ -137,5 +160,11 @@
   ::selection {
     background: var(--accent);
     color: var(--foreground);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-new(root) {
+    animation-duration: 1ms;
   }
 }
