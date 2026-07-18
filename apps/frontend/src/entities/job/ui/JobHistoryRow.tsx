@@ -12,15 +12,15 @@ interface JobHistoryRowProps {
 
 export function JobHistoryRow({ job, leadingIcon, actions }: JobHistoryRowProps) {
   return (
-    <Item variant="muted" className="gap-3 border-border/60 bg-background/35">
-      <ItemMedia variant="icon" className="size-10 rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
+    <Item variant="muted" className="gap-4 p-4">
+      <ItemMedia variant="icon" className="size-11 border-2 border-border bg-foreground text-background">
         {leadingIcon}
       </ItemMedia>
       <ItemContent className="min-w-0">
-        <ItemTitle className="max-w-full truncate">
+        <ItemTitle className="max-w-full truncate font-black">
           {job.source_format.toUpperCase()} a {job.target_format.toUpperCase()}
         </ItemTitle>
-        <ItemDescription className="max-w-full truncate">
+        <ItemDescription className="max-w-full truncate font-mono text-[0.65rem] uppercase">
           {new Date(job.created_at).toLocaleString()} · {formatBytes(job.file_size)}
         </ItemDescription>
       </ItemContent>

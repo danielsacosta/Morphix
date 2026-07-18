@@ -20,21 +20,13 @@ export function ConversionProgress({ currentJobs, flowState, fileCount }: Conver
   const hasJobs = currentJobs.length > 0;
   const finishedCount = currentJobs.filter((job) => ['COMPLETED', 'FAILED', 'EXPIRED', 'DELETED'].includes(job.status)).length;
   const realtimeProgress = hasJobs ? currentJobs.reduce((total, job) => total + (job.progress_percent ?? fallbackProgress(job)), 0) / currentJobs.length : 0;
-  const progressSteps = [
-    { key: 'creating', label: fileCount > 1 ? 'Archivos' : 'Archivo', active: flowState === 'creating', done: hasJobs },
-    { key: 'uploading', label: 'Carga', active: flowState === 'uploading', done: ['starting', 'polling', 'ready'].includes(flowState) },
-    { key: 'polling', label: 'Conversión', active: ['starting', 'polling'].includes(flowState), done: hasJobs && finishedCount === currentJobs.length, value: realtimeProgress },
-    { key: 'ready', label: 'Resultado', active: flowState === 'ready', done: flowState === 'ready' },
-  ];
+  const label = flowState === 'ready' ? 'Conversión completada' : flowState === 'failed' ? 'La conversión necesita atención' : flowState === 'polling' ? 'Procesando archivos' : fileCount > 1 ? 'Preparando archivos' : 'Preparando archivo';
+  const value = flowState === 'ready' ? 100 : realtimeProgress;
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-4" aria-label="Conversion progress">
-      {progressSteps.map((step) => (
-        <div key={step.key} className="grid gap-2">
-          <Progress value={step.done ? 100 : step.active ? step.value ?? 62 : 0} className="h-1.5" />
-          <span className="text-xs text-muted-foreground">{step.label}</span>
-        </div>
-      ))}
+    <div className="grid gap-2 border-t-2 border-border pt-5" aria-label="Progreso de conversión">
+      <div className="flex items-center justify-between gap-3"><span className="font-mono text-[0.65rem] font-black tracking-[0.12em] text-muted-foreground uppercase">{label}</span><span className="font-mono text-[0.65rem] font-black tracking-[0.12em] uppercase">{finishedCount}/{currentJobs.length || fileCount}</span></div>
+      <Progress value={value} className="h-2" />
     </div>
   );
 }

@@ -35,7 +35,7 @@ export function DeleteJobButton({ jobId, onDeleted, onError }: DeleteJobButtonPr
 
       <DialogContent className="sm:max-w-md">
         <DialogHeader className="pr-8">
-          <div className="mb-2 flex size-11 items-center justify-center rounded-lg bg-destructive/15 text-destructive ring-1 ring-destructive/25">
+          <div className="mb-2 flex size-11 items-center justify-center border-2 border-border bg-destructive text-white">
             <TriangleAlert className="size-5" aria-hidden="true" />
           </div>
           <DialogTitle>Eliminar conversión</DialogTitle>

@@ -9,15 +9,15 @@ interface ConversionRouteSummaryProps {
 
 export function ConversionRouteSummary({ pair }: ConversionRouteSummaryProps) {
   return (
-    <Item variant="muted" className="border-border/60 bg-primary/10">
-      <ItemMedia variant="icon" className="text-primary">
+    <Item variant="muted" className="border-foreground bg-accent">
+      <ItemMedia variant="icon" className="size-10 border-2 border-border bg-foreground text-background">
         <ConversionIcon category={pair.category} className="size-5" />
       </ItemMedia>
       <ItemContent>
-        <ItemTitle>{pair.label}</ItemTitle>
+        <ItemTitle className="font-black">{pair.label}</ItemTitle>
         <ItemDescription>{pair.description}</ItemDescription>
       </ItemContent>
-      <Badge variant="outline" className="border-primary/35 text-primary">
+      <Badge variant="outline" className="border-foreground">
         Formato
       </Badge>
     </Item>

@@ -53,7 +53,7 @@ export function DownloadJobButton({ job, variant = 'text', onError }: DownloadJo
       {trigger}
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader className="pr-8">
-          <div className="mb-2 flex size-11 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
+          <div className="mb-2 flex size-11 items-center justify-center border-2 border-border bg-primary text-primary-foreground">
             <FileText className="size-5" aria-hidden="true" />
           </div>
           <DialogTitle>Detalles de descarga</DialogTitle>
@@ -61,7 +61,7 @@ export function DownloadJobButton({ job, variant = 'text', onError }: DownloadJo
         </DialogHeader>
 
         <div className="grid gap-4">
-          <div className="rounded-lg border border-border/70 bg-background/35 p-4">
+          <div className="border-2 border-border bg-background p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <p className="truncate text-base font-semibold text-foreground">{routeLabel}</p>
@@ -73,9 +73,9 @@ export function DownloadJobButton({ job, variant = 'text', onError }: DownloadJo
 
           <div className="grid gap-3 sm:grid-cols-2">
             {details.map((detail) => (
-              <div key={detail.label} className="rounded-lg border border-border/60 bg-muted/25 p-3">
-                <p className="text-xs font-medium text-muted-foreground">{detail.label}</p>
-                <p className="mt-1 break-words text-sm font-medium text-foreground">{detail.value}</p>
+              <div key={detail.label} className="border-2 border-border bg-secondary p-3">
+                <p className="font-mono text-[0.62rem] font-black tracking-[0.1em] text-muted-foreground uppercase">{detail.label}</p>
+                <p className="mt-1 break-words text-sm font-bold text-foreground">{detail.value}</p>
               </div>
             ))}
           </div>

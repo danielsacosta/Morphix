@@ -10,15 +10,15 @@ interface JobStatusBadgeProps {
 }
 
 const statusClassName: Record<JobStatus, string> = {
-  PENDING: 'border-muted-foreground/25 bg-muted/40 text-muted-foreground',
-  UPLOAD_REQUESTED: 'border-primary/35 bg-primary/10 text-primary',
-  UPLOADED: 'border-primary/35 bg-primary/10 text-primary',
-  QUEUED: 'border-accent/35 bg-accent/10 text-accent',
-  PROCESSING: 'border-accent/40 bg-accent/10 text-accent',
-  COMPLETED: 'border-primary/45 bg-primary/15 text-primary',
-  FAILED: 'border-destructive/45 bg-destructive/15 text-destructive',
-  EXPIRED: 'border-destructive/45 bg-destructive/15 text-destructive',
-  DELETED: 'border-muted-foreground/25 bg-muted/40 text-muted-foreground',
+  PENDING: 'border-border bg-muted text-muted-foreground',
+  UPLOAD_REQUESTED: 'border-border bg-accent text-accent-foreground',
+  UPLOADED: 'border-border bg-accent text-accent-foreground',
+  QUEUED: 'border-border bg-secondary text-foreground',
+  PROCESSING: 'border-border bg-accent text-accent-foreground',
+  COMPLETED: 'border-border bg-primary text-primary-foreground',
+  FAILED: 'border-border bg-destructive text-white',
+  EXPIRED: 'border-border bg-destructive text-white',
+  DELETED: 'border-border bg-muted text-muted-foreground',
 };
 
 export function JobStatusBadge({ status, withIcon = false }: JobStatusBadgeProps) {

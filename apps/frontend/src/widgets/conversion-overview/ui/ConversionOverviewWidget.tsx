@@ -39,22 +39,23 @@ export function ConversionOverviewWidget() {
 
   return (
     <section id="overview" aria-label="Resumen de conversiones" className="scroll-mt-24">
-      <Card className="h-full min-h-[620px] border-border/70 bg-card/85 shadow-2xl shadow-black/20 backdrop-blur sm:min-h-[560px]">
-        <CardHeader className="border-b border-border/45 pb-5">
+      <Card>
+        <CardHeader className="border-b-2 border-border pb-6">
           <div className="space-y-1">
-            <span className="text-xs font-semibold tracking-normal text-muted-foreground uppercase">Resumen</span>
-            <CardTitle className="text-2xl font-semibold tracking-normal sm:text-3xl">Tu actividad</CardTitle>
+            <span className="font-mono text-[0.65rem] font-black tracking-[0.16em] text-primary uppercase">Metrics / session pulse</span>
+            <CardTitle className="text-3xl font-black tracking-[-0.06em] sm:text-4xl">Tu actividad.</CardTitle>
+            <p className="text-base font-medium text-muted-foreground">Una lectura rápida de tus operaciones en esta sesión.</p>
           </div>
         </CardHeader>
 
-        <CardContent className="grid flex-1 min-h-0 gap-4 overflow-y-auto">
+        <CardContent className="grid gap-4 pt-6">
           {isEmpty ? (
-            <Empty className="min-h-32 border border-dashed border-border/70 bg-background/25">
+            <Empty className="min-h-64 border-2 border-dashed border-border bg-background">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
                   <FileStack className="size-4" aria-hidden="true" />
                 </EmptyMedia>
-                <EmptyTitle>Sin actividad aún</EmptyTitle>
+                <EmptyTitle className="text-xl font-black tracking-[-0.04em]">Sin actividad aún</EmptyTitle>
                 <EmptyDescription>Tus estadísticas aparecerán aquí cuando proceses tu primera conversión.</EmptyDescription>
               </EmptyHeader>
             </Empty>
@@ -67,7 +68,7 @@ export function ConversionOverviewWidget() {
                 <StatTile icon={<XCircle className="size-4" aria-hidden="true" />} label="Fallidos" value={stats.failed} tone="destructive" />
               </div>
 
-              <div className="grid gap-3 rounded-lg border border-border/60 bg-background/35 p-4 sm:grid-cols-2">
+              <div className="grid gap-3 border-2 border-border bg-secondary p-4 sm:grid-cols-2">
                 <div className="space-y-1">
                   <p className="text-xs font-medium text-muted-foreground">Volumen procesado</p>
                   <p className="text-lg font-semibold text-foreground">{formatBytes(stats.volume)}</p>
@@ -87,8 +88,8 @@ export function ConversionOverviewWidget() {
               {stats.latest && (
                 <div className="space-y-2">
                   <p className="text-xs font-semibold tracking-normal text-muted-foreground uppercase">Última conversión</p>
-                  <Item variant="muted" className="border-border/60 bg-background/35">
-                    <ItemMedia variant="icon" className="size-10 rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
+                  <Item variant="muted" className="p-4">
+                    <ItemMedia variant="icon" className="size-11 border-2 border-border bg-foreground text-background">
                       <ConversionIcon category={findConversionPair(stats.latest.source_format, stats.latest.target_format)?.category} className="size-5" />
                     </ItemMedia>
                     <ItemContent className="min-w-0">
@@ -128,11 +129,11 @@ function StatTile({ icon, label, value, tone = 'default' }: StatTileProps) {
   };
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-background/35 p-4">
-      <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-lg ring-1', toneClass[tone])}>{icon}</span>
+    <div className="flex items-center gap-3 border-2 border-border bg-background p-4">
+      <span className={cn('flex size-10 shrink-0 items-center justify-center border-2 border-border', toneClass[tone])}>{icon}</span>
       <span className="grid min-w-0">
-        <span className="text-xs font-medium text-muted-foreground">{label}</span>
-        <span className="text-lg font-semibold text-foreground">{value}</span>
+        <span className="font-mono text-[0.65rem] font-black tracking-[0.12em] text-muted-foreground uppercase">{label}</span>
+        <span className="text-3xl font-black tracking-[-0.06em] text-foreground">{value}</span>
       </span>
     </div>
   );

@@ -15,11 +15,12 @@ export function JobsHistoryWidget() {
 
   return (
     <section id="history" aria-label="Historial de conversiones" className="scroll-mt-24">
-      <Card className="h-full min-h-[620px] border-border/70 bg-card/85 shadow-2xl shadow-black/20 backdrop-blur sm:min-h-[560px]">
-        <CardHeader className="border-b border-border/45 pb-5">
+      <Card>
+        <CardHeader className="border-b-2 border-border pb-6">
           <div className="space-y-1">
-            <span className="text-xs font-semibold tracking-normal text-muted-foreground uppercase">Historial</span>
-            <CardTitle className="text-2xl font-semibold tracking-normal sm:text-3xl">Conversiones recientes</CardTitle>
+            <span className="font-mono text-[0.65rem] font-black tracking-[0.16em] text-primary uppercase">Archive / session history</span>
+            <CardTitle className="text-3xl font-black tracking-[-0.06em] sm:text-4xl">Conversiones recientes.</CardTitle>
+            <p className="text-base font-medium text-muted-foreground">Resultados disponibles para descargar o eliminar.</p>
           </div>
           <CardAction>
             <Button variant="outline" type="button" onClick={() => void jobs.refetch()} disabled={jobs.isFetching}>
@@ -29,14 +30,14 @@ export function JobsHistoryWidget() {
           </CardAction>
         </CardHeader>
 
-        <CardContent className="grid flex-1 min-h-0 content-start gap-3 overflow-y-auto">
+        <CardContent className="grid content-start gap-3 pt-6">
           {jobs.data?.length === 0 && (
-            <Empty className="min-h-32 border border-dashed border-border/70 bg-background/25">
+            <Empty className="min-h-64 border-2 border-dashed border-border bg-background">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
                   <Clock3 className="size-4" aria-hidden="true" />
                 </EmptyMedia>
-                <EmptyTitle>Sin conversiones registradas</EmptyTitle>
+                <EmptyTitle className="text-xl font-black tracking-[-0.04em]">Sin conversiones registradas</EmptyTitle>
                 <EmptyDescription>Todavía no hay archivos procesados en esta sesión.</EmptyDescription>
               </EmptyHeader>
             </Empty>
