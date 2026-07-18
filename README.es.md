@@ -6,6 +6,14 @@ Aplicación web para conversión asíncrona de archivos sin APIs externas de con
 
 Licenciado bajo la [Licencia Apache 2.0](LICENSE).
 
+## Uso local
+
+Para levantar el sistema completo localmente con Docker Compose:
+
+```bash
+docker compose up --build
+```
+
 ## Arquitectura
 
 Cuatro límites explícitos: el frontend posee el flujo de usuario, la API posee la coordinación de jobs y la seguridad, el worker posee la ejecución de conversiones, y la infraestructura posee el despliegue, aislamiento, almacenamiento y observabilidad.
