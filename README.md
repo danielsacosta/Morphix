@@ -39,7 +39,7 @@ Hot-reload applies to the API (`uvicorn --reload`) and the frontend (Vite HMR). 
 
 API docs: http://localhost:8000/docs. The `X-User-Id` header (any string ≤128 chars) identifies the job owner and is stored in `localStorage` between sessions.
 
-## Architecture
+## Architecture — AWS
 
 Four explicit boundaries: frontend owns the user workflow, API owns job coordination and security, worker owns conversion execution, infrastructure owns deployment, isolation, storage and observability.
 

@@ -39,7 +39,7 @@ El hot-reload aplica a la API (`uvicorn --reload`) y al frontend (Vite HMR). Par
 
 Docs de la API: http://localhost:8000/docs. El header `X-User-Id` (cualquier string ≤128 caracteres) identifica al dueño del job y se guarda en `localStorage` entre sesiones.
 
-## Arquitectura
+## Arquitectura — AWS
 
 Cuatro límites explícitos: el frontend posee el flujo de usuario, la API posee la coordinación de jobs y la seguridad, el worker posee la ejecución de conversiones, y la infraestructura posee el despliegue, aislamiento, almacenamiento y observabilidad.
 
