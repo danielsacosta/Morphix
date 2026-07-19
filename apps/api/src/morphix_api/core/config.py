@@ -22,6 +22,13 @@ class Settings:
     upload_url_ttl_seconds: int = 900
     download_url_ttl_seconds: int = 900
     job_ttl_days: int = 7
+    runtime_backend: str = "aws"
+    local_data_dir: str = "/var/lib/morphix"
+    redis_url: str = "redis://localhost:6379/0"
+    local_public_url: str = "http://localhost:8000"
+    local_url_secret: str = "morphix-local-development-secret"
+    conversion_stream: str = "morphix:conversions"
+    realtime_channel: str = "morphix:job-events"
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -38,6 +45,13 @@ class Settings:
             upload_url_ttl_seconds=int(os.getenv("UPLOAD_URL_TTL_SECONDS", "900")),
             download_url_ttl_seconds=int(os.getenv("DOWNLOAD_URL_TTL_SECONDS", "900")),
             job_ttl_days=int(os.getenv("JOB_TTL_DAYS", "7")),
+            runtime_backend=os.getenv("RUNTIME_BACKEND", "aws").strip().lower(),
+            local_data_dir=os.getenv("LOCAL_DATA_DIR", "/var/lib/morphix"),
+            redis_url=os.getenv("REDIS_URL", "redis://localhost:6379/0"),
+            local_public_url=os.getenv("LOCAL_PUBLIC_URL", "http://localhost:8000").rstrip("/"),
+            local_url_secret=os.getenv("LOCAL_URL_SECRET", "morphix-local-development-secret"),
+            conversion_stream=os.getenv("CONVERSION_STREAM", "morphix:conversions"),
+            realtime_channel=os.getenv("REALTIME_CHANNEL", "morphix:job-events"),
         )
 
     @property

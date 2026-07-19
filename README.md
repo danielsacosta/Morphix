@@ -14,6 +14,31 @@ To run the complete system locally with Docker Compose:
 docker compose up --build
 ```
 
+The full system runs locally on Docker Compose: frontend (Vite dev with HMR), FastAPI API on uvicorn with reload, conversion worker consuming Redis, SQLite for state, and a shared filesystem for files. The local backend uses independent adapters; the AWS backend keeps its DynamoDB, S3, SQS, Step Functions, and Streams adapters unchanged.
+
+```mermaid
+flowchart LR
+    Browser["Browser (Vite :5173)"] -->|HTTP + X-User-Id| API["FastAPI :8000<br/>uvicorn --reload"]
+    Browser <-->|WebSocket /ws| API
+    Browser -->|local token PUT/GET| API
+    API -->|SQLite + filesystem| Local["Local volume<br/>SQLite + files"]
+    API -->|publish events| Redis[("Redis")]
+    Worker["Worker<br/>queue_worker"] -->|consume stream| Redis
+    Worker -->|read/write| Local
+    Worker -->|convert| LocalBin["LibreOffice / FFmpeg / ImageMagick"]
+    Worker -->|write output + mark COMPLETED| Local
+```
+
+1. Open http://localhost:5173. The frontend ships with a synthetic `runtime-config.json` that wires it to the API at `http://localhost:8000` and the realtime WebSocket at `ws://localhost:8000/ws`.
+2. Upload a supported file from the UI. The API issues a temporary local URL and stores the file in the shared filesystem.
+3. Start the conversion. The local `RedisConversionOrchestrator` publishes the job to a Redis Stream and marks it `QUEUED` in SQLite — no Step Functions needed.
+4. The worker consumes the message, runs the conversion pipeline (read → convert → write), and persists `PROCESSING → COMPLETED` (or `FAILED`) in SQLite.
+5. The API and worker publish events through Redis Pub/Sub; the API forwards them over WebSocket, so the UI updates in realtime.
+
+Hot-reload applies to the API (`uvicorn --reload`) and the frontend (Vite HMR). To apply worker changes, run `docker compose restart worker`. Use `docker compose down -v` to wipe SQLite, local files, and Redis; `docker compose down` keeps them persisted in the volume.
+
+API docs: http://localhost:8000/docs. The `X-User-Id` header (any string ≤128 chars) identifies the job owner and is stored in `localStorage` between sessions.
+
 ## Architecture
 
 Four explicit boundaries: frontend owns the user workflow, API owns job coordination and security, worker owns conversion execution, infrastructure owns deployment, isolation, storage and observability.
@@ -42,7 +67,7 @@ The runtime path is asynchronous: the frontend is delivered from S3 through Clou
 `apps/frontend/src` (React 19 + Vite + Tailwind v4 + shadcn/ui, server state via TanStack Query):
 
 ```mermaid
-flowchart TB
+flowchart LR
     app["app<br/>providers · router · styles"]
     pages["pages<br/>converter"]
     widgets["widgets<br/>workspace · overview · jobs-history · app-shell"]
@@ -113,37 +138,6 @@ Provisioned with Terraform modules (`infra/blueprints/modules`) and Terragrunt l
 - `docs/prd-coverage.md`: PRD requirement coverage checklist.
 
 No `Taskfile.yml` by design, matching MVP scope.
-
-## Local usage
-
-```bash
-docker compose up --build
-```
-
-The full system runs locally on Docker Compose: frontend (Vite dev with HMR), FastAPI API on uvicorn with reload, conversion worker polling SQS, and LocalStack emulating DynamoDB, S3, SQS and DynamoDB Streams. An `init` container provisions the tables, buckets and queues before the API and worker start.
-
-```mermaid
-flowchart LR
-    Browser["Browser (Vite :5173)"] -->|HTTP + X-User-Id| API["FastAPI :8000<br/>uvicorn --reload"]
-    Browser <-->|WebSocket /ws| API
-    Browser -->|presigned PUT/GET| LS[("LocalStack :4566<br/>S3 input/output")]
-    API -->|mark QUEUED + enqueue| LS
-    API -->|poll DynamoDB Streams| LS
-    Worker["Worker<br/>queue_worker"] -->|poll SQS| LS
-    Worker -->|download input| LS
-    Worker -->|convert| LocalBin["LibreOffice / FFmpeg / ImageMagick"]
-    Worker -->|upload output + mark COMPLETED| LS
-```
-
-1. Open http://localhost:5173. The frontend ships with a synthetic `runtime-config.json` that wires it to the API at `http://localhost:8000` and the realtime WebSocket at `ws://localhost:8000/ws`.
-2. Upload a supported file from the UI. The API issues a presigned URL rewritten to `http://localhost:4566` so the browser uploads directly to LocalStack S3.
-3. Start the conversion. The local `LocalSQSConversionOrchestrator` enqueues the job to SQS and marks it `QUEUED` in DynamoDB — no Step Functions needed.
-4. The worker picks the message, runs the conversion pipeline (download → convert → upload) and persists `PROCESSING → COMPLETED` (or `FAILED`) in DynamoDB.
-5. A background poller on the API reads DynamoDB Streams and pushes `job.updated` events over WebSocket, so the UI updates in realtime.
-
-Hot-reload applies to the API (`uvicorn --reload`) and the frontend (Vite HMR). To apply worker changes, run `docker compose restart worker`. Use `docker compose down -v` to wipe LocalStack state; `docker compose down` keeps it persisted.
-
-API docs: http://localhost:8000/docs. The `X-User-Id` header (any string ≤128 chars) identifies the job owner and is stored in `localStorage` between sessions.
 
 ## MVP Limits
 

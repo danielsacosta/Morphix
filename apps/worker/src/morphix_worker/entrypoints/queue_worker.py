@@ -4,6 +4,9 @@ import json
 import os
 
 from ..adapters.outbound.dynamodb.jobs_repository import DynamoDBJobRepository
+from ..adapters.outbound.local.filesystem import LocalFilesystemObjectStorage
+from ..adapters.outbound.local.redis_queue import RedisConversionQueue
+from ..adapters.outbound.local.sqlite_jobs_repository import SQLiteJobRepository
 from ..adapters.outbound.s3.object_storage import S3ObjectStorage
 from ..adapters.outbound.sqs.conversion_queue import SQSConversionQueue
 from ..adapters.outbound.stepfunctions.task_callback import StepFunctionsTaskCallback
@@ -16,6 +19,15 @@ from ..core.workspace import TempWorkspaceManager
 
 
 def build_pipeline(settings: Settings) -> ConversionJobPipeline:
+    if settings.runtime_backend == "local":
+        return ConversionJobPipeline(
+            storage=LocalFilesystemObjectStorage(settings),
+            repository=SQLiteJobRepository(settings),
+            converters=LocalConverterRegistry(),
+            workspace_manager=TempWorkspaceManager(settings.workdir),
+            timeout_seconds=settings.conversion_timeout_seconds,
+        )
+
     return ConversionJobPipeline(
         storage=S3ObjectStorage(settings),
         repository=DynamoDBJobRepository(settings),
@@ -35,10 +47,10 @@ def _build_callback(settings: Settings) -> StepFunctionsTaskCallback | None:
 def run_queue_worker(settings: Settings | None = None) -> int:
     configure_logging()
     resolved_settings = settings or Settings.from_env()
-    if not resolved_settings.conversion_queue_url:
+    if resolved_settings.runtime_backend != "local" and not resolved_settings.conversion_queue_url:
         raise RuntimeError("CONVERSION_QUEUE_URL is required for queue worker mode")
 
-    queue = SQSConversionQueue(resolved_settings)
+    queue = RedisConversionQueue(resolved_settings) if resolved_settings.runtime_backend == "local" else SQSConversionQueue(resolved_settings)
     callback = _build_callback(resolved_settings)
     pipeline = build_pipeline(resolved_settings)
 

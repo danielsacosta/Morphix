@@ -1,6 +1,6 @@
 # Morphix API
 
-FastAPI service responsible for conversion job lifecycle, batch creation, presigned S3 URLs, Step Functions orchestration, and user ownership checks.
+FastAPI service responsible for conversion job lifecycle, batch creation, storage URLs, orchestration, and user ownership checks. The application selects local SQLite/filesystem/Redis adapters through `RUNTIME_BACKEND=local` and keeps the AWS adapters available through `RUNTIME_BACKEND=aws`.
 
 ## Endpoints
 

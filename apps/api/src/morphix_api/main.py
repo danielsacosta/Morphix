@@ -20,21 +20,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         CORSMiddleware,
         allow_origins=resolved_settings.allowed_origins,
         allow_credentials=False,
-        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "X-User-Id"],
     )
     api.add_exception_handler(DomainError, domain_error_handler)
     api.include_router(health_router)
     api.include_router(jobs_router)
 
-    if (os.getenv("LOCAL_REALTIME") or "").lower() in {"1", "true", "yes"}:
+    if resolved_settings.runtime_backend == "local":
+        from .adapters.inbound.http.routes.local_files import router as local_files_router
+
+        api.include_router(local_files_router)
+
+    if resolved_settings.runtime_backend == "local" and (os.getenv("LOCAL_REALTIME") or "").lower() in {"1", "true", "yes"}:
         from .realtime.local_realtime import register_local_realtime
 
-        register_local_realtime(api)
+        register_local_realtime(api, resolved_settings)
 
     return api
 
 
 app = create_app()
 handler = Mangum(app)
-

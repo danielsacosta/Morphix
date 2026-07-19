@@ -7,7 +7,7 @@ from .entrypoints.queue_worker import run_queue_worker
 
 def main() -> int:
     settings = Settings.from_env()
-    if settings.conversion_queue_url:
+    if settings.runtime_backend == "local" or settings.conversion_queue_url:
         return run_queue_worker(settings)
     return run_from_env()
 

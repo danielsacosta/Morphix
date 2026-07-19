@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-import os
 from typing import Annotated
 
 from fastapi import Header
 
 from ....adapters.outbound.dynamodb.jobs_repository import DynamoDBJobsRepository
+from ....adapters.outbound.local.sqlite_jobs_repository import SQLiteJobsRepository
+from ....adapters.outbound.local.filesystem_url_service import LocalFilesystemUrlService
 from ....adapters.outbound.s3.presigned_url_service import S3PresignedUrlService
 from ....adapters.outbound.stepfunctions.conversion_orchestrator import StepFunctionsConversionOrchestrator
 from ....application.ports.conversion_orchestrator import ConversionOrchestrator
@@ -16,17 +17,21 @@ from ....domain.errors import AuthenticationRequiredError
 
 
 def _build_conversion_orchestrator(settings: Settings) -> ConversionOrchestrator:
-    mode = (os.getenv("ORCHESTRATION_MODE") or "sfn").lower()
-    if mode == "local":
-        from ....adapters.outbound.local.orchestrator import LocalSQSConversionOrchestrator
+    if settings.runtime_backend == "local":
+        from ....adapters.outbound.local.redis_orchestrator import RedisConversionOrchestrator
 
-        return LocalSQSConversionOrchestrator(settings)
+        return RedisConversionOrchestrator(settings)
+
     return StepFunctionsConversionOrchestrator(settings)
 
 
 _settings = Settings.from_env()
-_repository = DynamoDBJobsRepository(_settings)
-_object_url_service = S3PresignedUrlService(_settings)
+if _settings.runtime_backend == "local":
+    _repository = SQLiteJobsRepository(_settings)
+    _object_url_service = LocalFilesystemUrlService(_settings)
+else:
+    _repository = DynamoDBJobsRepository(_settings)
+    _object_url_service = S3PresignedUrlService(_settings)
 _conversion_orchestrator = _build_conversion_orchestrator(_settings)
 
 

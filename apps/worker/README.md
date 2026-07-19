@@ -1,6 +1,6 @@
 # Morphix Worker
 
-Python worker executed as an ECS Fargate task. It downloads an input file from S3, converts it locally, uploads the output to S3, and updates the DynamoDB job record.
+Python worker executed as an ECS Fargate task in AWS or as a Docker Compose process locally. In AWS it uses S3, DynamoDB and SQS; locally it uses the shared filesystem, SQLite and Redis without changing the conversion pipeline.
 
 ## Engines
 
@@ -11,4 +11,3 @@ Python worker executed as an ECS Fargate task. It downloads an input file from S
 - FFmpeg: audio and video conversions.
 
 The worker does not call external conversion APIs.
-

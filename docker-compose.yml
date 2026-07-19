@@ -1,36 +1,11 @@
 services:
-  localstack:
-    image: localstack/localstack:3.7
-    environment:
-      SERVICES: dynamodb,s3,sqs,dynamodbstreams
-      EXTRA_CORS_ALLOWED_HEADERS: "x-amz-request-id,x-amz-id-2"
-      DISABLE_CORS_CHECKS: "1"
-    ports:
-      - "4566:4566"
-    volumes:
-      - localstack_data:/var/lib/localstack
+  redis:
+    image: redis:7-alpine
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:4566/_localstack/health"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
-      timeout: 5s
-      retries: 30
-      start_period: 10s
-
-  init:
-    image: localstack/localstack:3.7
-    entrypoint: ["/bin/bash", "/etc/localstack/init-bootstrap.sh"]
-    environment:
-      AWS_ACCESS_KEY_ID: test
-      AWS_SECRET_ACCESS_KEY: test
-      AWS_DEFAULT_REGION: us-east-1
-      AWS_ENDPOINT_URL: http://localstack:4566
-      LOCALSTACK_HOST: localstack
-    volumes:
-      - ./scripts/localstack-init.sh:/etc/localstack/init-bootstrap.sh:ro
-    depends_on:
-      localstack:
-        condition: service_healthy
-    restart: "no"
+      timeout: 3s
+      retries: 20
 
   api:
     build:
@@ -42,23 +17,23 @@ services:
       PYTHONUNBUFFERED: "1"
       PROJECT_NAME: morphix
       ENVIRONMENT: local
-      AWS_REGION: us-east-1
-      AWS_ENDPOINT_URL: http://localstack:4566
-      AWS_ACCESS_KEY_ID: test
-      AWS_SECRET_ACCESS_KEY: test
+      RUNTIME_BACKEND: local
+      LOCAL_DATA_DIR: /var/lib/morphix
+      LOCAL_PUBLIC_URL: http://localhost:8000
+      LOCAL_URL_SECRET: morphix-local-development-secret
+      REDIS_URL: redis://redis:6379/0
+      CONVERSION_STREAM: morphix:conversions
+      REALTIME_CHANNEL: morphix:job-events
       JOBS_TABLE_NAME: morphix-dev-jobs
-      CONNECTIONS_TABLE_NAME: morphix-dev-websocket-connections
       INPUT_BUCKET: morphix-dev-input
       OUTPUT_BUCKET: morphix-dev-output
-      CONVERSION_QUEUE_URL: http://localstack:4566/000000000000/morphix-dev-conversions
-      ORCHESTRATION_MODE: local
       LOCAL_REALTIME: "1"
-      S3_BROWSER_URL_BASE: http://localhost:4566
     volumes:
       - ./apps/api/src:/app/src
+      - morphix_local_data:/var/lib/morphix
     depends_on:
-      init:
-        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
 
   worker:
     build:
@@ -68,21 +43,21 @@ services:
       PYTHONUNBUFFERED: "1"
       PROJECT_NAME: morphix
       ENVIRONMENT: local
-      AWS_REGION: us-east-1
-      AWS_ENDPOINT_URL: http://localstack:4566
-      AWS_ACCESS_KEY_ID: test
-      AWS_SECRET_ACCESS_KEY: test
+      RUNTIME_BACKEND: local
+      LOCAL_DATA_DIR: /var/lib/morphix
+      REDIS_URL: redis://redis:6379/0
+      CONVERSION_STREAM: morphix:conversions
+      REALTIME_CHANNEL: morphix:job-events
       JOBS_TABLE_NAME: morphix-dev-jobs
       INPUT_BUCKET: morphix-dev-input
       OUTPUT_BUCKET: morphix-dev-output
-      CONVERSION_QUEUE_URL: http://localstack:4566/000000000000/morphix-dev-conversions
       WORKDIR: /tmp/morphix
-      ORCHESTRATION_MODE: local
     volumes:
       - ./apps/worker/src:/app/src:ro
+      - morphix_local_data:/var/lib/morphix
     depends_on:
-      init:
-        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
 
   frontend:
     build:
@@ -107,4 +82,4 @@ services:
       - api
 
 volumes:
-  localstack_data:
+  morphix_local_data:

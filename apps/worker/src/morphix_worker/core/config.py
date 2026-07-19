@@ -16,6 +16,11 @@ class Settings:
     workdir: str
     conversion_timeout_seconds: int
     queue_wait_time_seconds: int
+    runtime_backend: str = "aws"
+    local_data_dir: str = "/var/lib/morphix"
+    redis_url: str = "redis://localhost:6379/0"
+    conversion_stream: str = "morphix:conversions"
+    realtime_channel: str = "morphix:job-events"
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -30,4 +35,9 @@ class Settings:
             workdir=os.getenv("WORKDIR", "/tmp/morphix"),
             conversion_timeout_seconds=int(os.getenv("CONVERSION_TIMEOUT_SECONDS", "900")),
             queue_wait_time_seconds=int(os.getenv("QUEUE_WAIT_TIME_SECONDS", "20")),
+            runtime_backend=os.getenv("RUNTIME_BACKEND", "aws").strip().lower(),
+            local_data_dir=os.getenv("LOCAL_DATA_DIR", "/var/lib/morphix"),
+            redis_url=os.getenv("REDIS_URL", "redis://localhost:6379/0"),
+            conversion_stream=os.getenv("CONVERSION_STREAM", "morphix:conversions"),
+            realtime_channel=os.getenv("REALTIME_CHANNEL", "morphix:job-events"),
         )
