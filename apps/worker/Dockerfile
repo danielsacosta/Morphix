@@ -10,6 +10,7 @@ RUN apt-get update \
     ffmpeg \
     fonts-dejavu \
     imagemagick \
+    librsvg2-bin \
     libreoffice \
   && rm -rf /var/lib/apt/lists/*
 
