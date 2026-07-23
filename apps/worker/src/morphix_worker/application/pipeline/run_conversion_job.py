@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 
 from ..ports.converter_registry import ConverterRegistry
@@ -16,6 +17,9 @@ from .steps.mark_completed import mark_completed
 from .steps.mark_failed import mark_failed
 from .steps.mark_processing import mark_processing
 from .steps.upload_output import upload_output
+
+
+logger = logging.getLogger(__name__)
 
 
 class ConversionJobPipeline:
@@ -56,5 +60,12 @@ class ConversionJobPipeline:
             return ConversionResult(job_id=job.job_id, status="COMPLETED", output_key=output_key, error_message=None)
         except Exception:
             duration = time.monotonic() - started_at
+            logger.exception(
+                "Conversion job failed: job_id=%s source=%s target=%s duration=%.3fs",
+                job.job_id,
+                job.source_format,
+                job.target_format,
+                duration,
+            )
             message = mark_failed(self.repository, job, duration)
             return ConversionResult(job_id=job.job_id, status="FAILED", output_key=job.output_key, error_message=message)
